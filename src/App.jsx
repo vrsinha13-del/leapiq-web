@@ -182,10 +182,11 @@ function HomeScreen({ setScreen, startSubject }) {
           </div>
           <div style={{ display:'flex', gap:8 }}>
             <button className="ghost-btn" onClick={() => setScreen('report')}>📊 Progress</button>
-            {isLoggedIn
-              ? <button className="ghost-btn" onClick={() => useStore.getState().logout()}>Sign out</button>
-              : <button style={{ background:'#fff', border:'none', color:'#4338ca', borderRadius:'99px', padding:'7px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:800, fontSize:13 }} onClick={() => setScreen('signup')}>Sign in</button>
-            }
+         <button
+           style={{ background:'#fff', border:'none', color:'#4338ca', borderRadius:'99px', padding:'7px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:800, fontSize:13 }}
+           onClick={() => { alert('clicked'); setScreen('signup'); }}>
+           Sign in
+         </button>
           </div>
         </div>
         {/* Greeting */}
