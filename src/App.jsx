@@ -517,34 +517,35 @@ function StudentReport({ setScreen, goHome }) {
 
 // ─── SIGNUP ────────────────────────────────────────────────────────────────
 function SignupScreen({ setScreen, goHome }) {
-  const [name,  setName]  = useState('');
-  const [email, setEmail] = useState('');
-  const [grade, setGrade] = useState('');
+  const [name,   setName]   = useState('');
+  const [email,  setEmail]  = useState('');
   const [mobile, setMobile] = useState('');
-  const [pass,  setPass]  = useState('');
-  const [pass2, setPass2] = useState('');
-  const [err,   setErr]   = useState('');
+  const [grade,  setGrade]  = useState('');
+  const [pass,   setPass]   = useState('');
+  const [pass2,  setPass2]  = useState('');
+  const [err,    setErr]    = useState('');
 
-  // Grade options matching students table
-  const GRADES = ['Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Other'];
+  const GRADES = [
+    'Grade 5','Grade 6','Grade 7',
+    'Grade 8','Grade 9','Grade 10','Other'
+  ];
 
   function handleSave(e) {
     e.preventDefault();
-    if (!name.trim())          { setErr('Please enter your name.'); return; }
-    if (!email.includes('@'))  { setErr('Please enter a valid email.'); return; }
-    if (!mobile.trim())        { setErr('Please enter your mobile number.'); return; }
-    if (!grade)                { setErr('Please select your grade.'); return; }
-    if (pass.length < 6)       { setErr('Password must be at least 6 characters.'); return; }
-    if (pass !== pass2)        { setErr('Passwords do not match.'); return; }
-
+    if (!name.trim())         { setErr('Please enter your name.'); return; }
+    if (!email.includes('@')) { setErr('Please enter a valid email.'); return; }
+    if (!mobile.trim())       { setErr('Please enter your mobile number.'); return; }
+    if (!grade)               { setErr('Please select your grade.'); return; }
+    if (pass.length < 6)      { setErr('Password must be at least 6 characters.'); return; }
+    if (pass !== pass2)       { setErr('Passwords do not match.'); return; }
     const pin = genPin();
     useStore.getState().login({
-      id:              Date.now() + '',
-      name:            name.trim(),
-      email:           email.trim().toLowerCase(),
-      mobile:          mobile.trim(),
-      grade,                          // ← stored as 'Grade 6', 'Grade 7' etc.
-      parentPin:       pin,
+      id:               Date.now() + '',
+      name:             name.trim(),
+      email:            email.trim().toLowerCase(),
+      mobile:           mobile.trim(),
+      grade,
+      parentPin:        pin,
       parentPinChanged: false,
     });
     setScreen('signup_done');
@@ -553,38 +554,64 @@ function SignupScreen({ setScreen, goHome }) {
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
       <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
+        <div style={{ textAlign:'left', marginBottom:8 }}>
+          <button className="back-btn" onClick={goHome}>← Back</button>
+        </div>
         <div style={{ fontSize:48, marginBottom:8 }}>🚀</div>
         <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Join Leap IQ</div>
         <div style={{ color:'rgba(255,255,255,0.75)', fontSize:14 }}>Free to start · Track your progress</div>
       </div>
       <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18, overflowY:'auto' }}>
         <form onSubmit={handleSave} style={{ display:'flex', flexDirection:'column' }}>
+
           <label className="lbl">Your Name</label>
-          <input className="field" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Arjun Sharma" />
+          <input className="field" value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="e.g. Arjun Sharma" />
 
           <label className="lbl">Email Address</label>
-          <input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" />
+          <input className="field" type="email" value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com" />
 
           <label className="lbl">Mobile Number</label>
-          <input className="field" type="tel" value={mobile} onChange={e=>setMobile(e.target.value)} placeholder="+91 98765 43210" />
+          <input className="field" type="tel" value={mobile}
+            onChange={e => setMobile(e.target.value)}
+            placeholder="+91 98765 43210" />
 
           <label className="lbl">Your Grade</label>
-          <select className="field" value={grade} onChange={e=>setGrade(e.target.value)}>
+          <select className="field" value={grade}
+            onChange={e => setGrade(e.target.value)}>
             <option value="">Select grade...</option>
-            {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+            {GRADES.map(g => (
+              <option key={g} value={g}>{g}</option>
+            ))}
           </select>
 
           <label className="lbl">Password</label>
-          <input className="field" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="At least 6 characters" />
+          <input className="field" type="password" value={pass}
+            onChange={e => setPass(e.target.value)}
+            placeholder="At least 6 characters" />
 
           <label className="lbl">Confirm Password</label>
-          <input className="field" type="password" value={pass2} onChange={e=>setPass2(e.target.value)} placeholder="Retype password" />
+          <input className="field" type="password" value={pass2}
+            onChange={e => setPass2(e.target.value)}
+            placeholder="Retype password" />
 
           {err && <div className="error-box">{err}</div>}
-          <button type="submit" className="primary-btn">Create Account →</button>
+
+          <button type="submit" className="primary-btn">
+            Create Account →
+          </button>
         </form>
-        <button className="secondary-btn" onClick={goHome}>Skip for now</button>
-        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>Your data is private and never shared.</p>
+
+        <button className="secondary-btn" onClick={goHome}>
+          Skip for now
+        </button>
+
+        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>
+          Your data is private and never shared.
+        </p>
       </div>
     </div>
   );
