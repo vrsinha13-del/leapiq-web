@@ -173,7 +173,7 @@ function HomeScreen({ setScreen, startSubject }) {
     <div>
       {/* Hero */}
       <div style={{ background:'linear-gradient(135deg,#1e1b4b 0%,#4338ca 60%,#7c3aed 100%)', padding:'0 0 52px', position:'relative', overflow:'hidden' }}>
-        <div style={{ position:'absolute', top:-60, right:-60, width:220, height:220, borderRadius:'50%', background:'rgba(255,255,255,0.04)' }}/>
+        <div style={{ position:'absolute', top:-60, right:-60, width:220, height:220, borderRadius:'50%', background:'rgba(255,255,255,0.04)', pointerEvents:'none' }}/>
         {/* Nav */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'18px' }}>
           <div>
