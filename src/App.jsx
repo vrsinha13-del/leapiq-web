@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useStore, SUBJECTS } from './lib/store';
-import { selectNextQuestion, updateRecord, sessionEndMessage, strengthSummary, 
-         fullTopicBreakdown, checkLevelGraduation, DIFF_LABEL, DIFF_TIME } from './lib/engine';
+import {
+  selectNextQuestion, sessionEndMessage, strengthSummary,
+  fullTopicBreakdown, checkTopicLevelUnlock,
+  getTimers, DIFF_LABEL
+} from './lib/engine';
 import { QB } from './lib/questions';
 
 const fmt = s => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
@@ -97,7 +100,7 @@ function showToast(msg, bg='#1e1b4b') {
   setTimeout(() => t.remove(), 2100);
 }
 
-// ─── LEVEL UP TOAST (bigger, special celebration) ──────────────────────────
+// ─── LEVEL UP TOAST ────────────────────────────────────────────────────────
 function showLevelUpToast(msg) {
   const t = document.createElement('div');
   t.className = 'level-toast';
@@ -122,7 +125,11 @@ export default function App() {
   }
 
   function onSessionEnd(result) {
-    useStore.getState().endSession(result.subject, result.questionsAnswered);
+    useStore.getState().endSession(
+      result.subject,
+      result.questionsAnswered,
+      result.level || '6'
+    );
     setSessionResult(result);
     setScreen('session_end');
   }
@@ -182,17 +189,32 @@ function HomeScreen({ setScreen, startSubject }) {
           </div>
           <div style={{ display:'flex', gap:8 }}>
             <button className="ghost-btn" onClick={() => setScreen('report')}>📊 Progress</button>
-         <button
-           style={{ background:'#fff', border:'none', color:'#4338ca', borderRadius:'99px', padding:'7px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:800, fontSize:13 }}
-           onClick={() => { alert('clicked'); setScreen('signup'); }}>
-           Sign in
-         </button>
+            {isLoggedIn
+              ? <button className="ghost-btn" onClick={() => useStore.getState().logout()}>Sign out</button>
+              : <button style={{ background:'#fff', border:'none', color:'#4338ca', borderRadius:'99px', padding:'7px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:800, fontSize:13 }}
+                  onClick={() => setScreen('signup')}>Sign in</button>
+            }
           </div>
         </div>
         {/* Greeting */}
         <div style={{ padding:'6px 18px 0' }}>
           <h1 style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff', margin:'0 0 6px' }}>{greeting}</h1>
-          <p style={{ color:'rgba(255,255,255,0.8)', fontSize:13, margin:'0 0 18px', lineHeight:1.5 }}>{sub}</p>
+          <p style={{ color:'rgba(255,255,255,0.8)', fontSize:13, margin:'0 0 12px', lineHeight:1.5 }}>{sub}</p>
+
+          {/* Daily streak */}
+          {user?.streak > 1 && (
+            <div style={{
+              background:'rgba(255,255,255,0.15)', borderRadius:10,
+              padding:'8px 14px', marginBottom:14,
+              display:'inline-flex', alignItems:'center', gap:8
+            }}>
+              <span style={{ fontSize:20 }}>🔥</span>
+              <span style={{ color:'#fff', fontWeight:700, fontSize:13 }}>
+                {user.streak} day streak! Keep it going!
+              </span>
+            </div>
+          )}
+
           {/* Stats row */}
           <div style={{ display:'flex', gap:8 }}>
             {SUBJECTS.map(s => (
@@ -261,9 +283,8 @@ function HomeScreen({ setScreen, startSubject }) {
 
 // ─── PRACTICE ──────────────────────────────────────────────────────────────
 function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
-  const { topicRecords, sessionHistory, isGuestLimited, recordAnswer, user } = useStore();
-  const allQs    = QB[subject] || [];
-  const grade    = user?.grade || 'Grade 6'; // ← student grade for level filtering
+  const { topicRecords, sessionHistory, isGuestLimited, recordAnswer } = useStore();
+  const allQs = QB[subject] || [];
 
   const [current,   setCurrent]   = useState(null);
   const [selected,  setSelected]  = useState(null);
@@ -280,21 +301,22 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
   function loadNext() {
     if (isGuestLimited(subject)) { onLoginRequired(); return; }
 
-    // ← pass grade so engine filters by active levels
     const res = selectNextQuestion(
-      allQs, topicRecords, sessionHistory.length, recentIds, subject, grade
+      allQs, topicRecords, sessionHistory.length, recentIds, subject
     );
     if (!res) return;
 
     const { question: q } = res;
-    const di = q.difficulty === 'easy' ? 0 : q.difficulty === 'medium' ? 1 : 2;
-    const t  = DIFF_TIME[di];
+    const category = q.category || '';
+    const diff     = q.difficulty || 'easy';
+    const { shown } = getTimers(subject, category, diff);
+
     setCurrent(res);
     setSelected(null);
     setAnswered(false);
     setIsLate(false);
-    setTimer(t);
-    setTimerMax(t);
+    setTimer(shown);
+    setTimerMax(shown);
     setRecentIds(prev => [q.id, ...prev].slice(0, 15));
     clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
@@ -308,37 +330,53 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
   function handleAnswer(opt) {
     if (answered) return;
     clearInterval(timerRef.current);
-    const late    = timer <= 0;
-    const correct = opt === current.question.ans;
+
+    const q        = current.question;
+    const correct  = opt === q.ans;
+    const diff     = q.difficulty || 'easy';
+    const category = q.category   || '';
+    const level    = String(q.question_level || q.level || q.grade || '6');
+
+    // Calculate isLate using internal mastery threshold
+    const { mastery } = getTimers(subject, category, diff);
+    const timeTaken   = timerMax - timer;
+    const late        = mastery !== null
+      ? (timeTaken > mastery || timer <= 0)
+      : false; // GK — no slow penalty
+
     setSelected(opt);
     setAnswered(true);
     setIsLate(late);
 
-    // ← pass question_level as 3rd argument
+    // Record answer with full params
     recordAnswer(
       subject,
-      current.question.topic,
-      current.question.question_level || current.question.grade || '6',
+      q.topic,
+      level,
+      diff,
+      category,
       correct,
       late,
-      current.question.id
+      q.id
     );
 
     setQCount(c => c + 1);
+
     showToast(
       correct
         ? OK_MSGS[Math.floor(Math.random() * OK_MSGS.length)]
         : WRONG_MSGS[Math.floor(Math.random() * WRONG_MSGS.length)]
     );
 
-    // ← check for level graduation after recording
-    const graduation = checkLevelGraduation(
+    // Check for topic level unlock
+    const unlock = checkTopicLevelUnlock(
       useStore.getState().topicRecords,
       subject,
-      grade
+      q.topic,
+      category
     );
-    if (graduation.graduated) {
-      setTimeout(() => showLevelUpToast(graduation.message), 600);
+    if (unlock.unlocked) {
+      setTimeout(() => showLevelUpToast(unlock.message), 800);
     }
   }
 
@@ -346,7 +384,10 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
 
   function handlePracticeLater() {
     clearInterval(timerRef.current);
-    onEnd({ subject, questionsAnswered: qCount, subj });
+    const level = current?.question?.question_level ||
+                  current?.question?.level ||
+                  current?.question?.grade || '6';
+    onEnd({ subject, questionsAnswered: qCount, subj, level });
   }
 
   if (!current) return (
@@ -356,9 +397,11 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     </div>
   );
 
-  const q  = current.question;
-  const di = q.difficulty === 'easy' ? 0 : q.difficulty === 'medium' ? 1 : 2;
+  const q   = current.question;
   const pct = Math.max(0, Math.round((timer / timerMax) * 100));
+  const diffLabel = q.difficulty
+    ? q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1)
+    : 'Easy';
 
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
@@ -388,21 +431,21 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
       {/* Body */}
       <div style={{ flex:1, overflowY:'auto', padding:'16px 14px 100px' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:13 }}>
-          <span style={{ fontSize:11, color:'#9ca3af', fontWeight:600 }}>{tl(q.topic)}</span>
+          <span style={{ fontSize:11, color:'#9ca3af', fontWeight:600 }}>{tl(q.topic || '')}</span>
           <span style={{ fontSize:11, fontWeight:700, background:subj?.light, color:subj?.color, borderRadius:99, padding:'3px 11px' }}>
-            {DIFF_LABEL[di]}
+            {diffLabel}
           </span>
         </div>
-        <div className="q-card">{q.q}</div>
+        <div className="q-card">{q.q || q.question}</div>
         <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:14 }}>
-          {q.opts.map((opt, i) => {
-            const isCorrect = opt === q.ans;
+          {(q.opts || [q.option_a, q.option_b, q.option_c, q.option_d]).map((opt, i) => {
+            const isCorrect = opt === q.ans || opt === q.answer;
             const isSel     = opt === selected;
             let bg='#fff', border='1.5px solid #e5e7eb', color='#111', bBg='#f3f4f6', bColor='#6b7280';
             if (answered) {
-              if (isCorrect)      { bg='#dcfce7'; border='2px solid #16a34a'; color='#15803d'; bBg='#16a34a'; bColor='#fff'; }
-              else if (isSel)     { bg='#fee2e2'; border='2px solid #dc2626'; color='#dc2626'; bBg='#dc2626'; bColor='#fff'; }
-            } else if (isSel)     { bg=subj?.light; border=`2px solid ${subj?.color}`; color=subj?.color; }
+              if (isCorrect)  { bg='#dcfce7'; border='2px solid #16a34a'; color='#15803d'; bBg='#16a34a'; bColor='#fff'; }
+              else if (isSel) { bg='#fee2e2'; border='2px solid #dc2626'; color='#dc2626'; bBg='#dc2626'; bColor='#fff'; }
+            } else if (isSel) { bg=subj?.light; border=`2px solid ${subj?.color}`; color=subj?.color; }
             return (
               <button key={i} className="opt-btn" disabled={answered} onClick={() => handleAnswer(opt)}
                 style={{ background:bg, border, color, cursor:answered?'default':'pointer' }}>
@@ -417,15 +460,19 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
 
         {answered && (
           <>
-            <div style={{ borderRadius:13, padding:14, background:selected===q.ans?'#dcfce7':'#fee2e2', display:'flex', gap:9, alignItems:'flex-start', marginBottom:12 }}>
-              <span style={{ fontSize:18 }}>{selected===q.ans?'🎉':'💡'}</span>
+            <div style={{ borderRadius:13, padding:14, background:selected===(q.ans||q.answer)?'#dcfce7':'#fee2e2', display:'flex', gap:9, alignItems:'flex-start', marginBottom:12 }}>
+              <span style={{ fontSize:18 }}>{selected===(q.ans||q.answer)?'🎉':'💡'}</span>
               <div>
-                <div style={{ fontWeight:700, fontSize:14, color:selected===q.ans?'#15803d':'#dc2626' }}>
-                  {selected===q.ans
+                <div style={{ fontWeight:700, fontSize:14, color:selected===(q.ans||q.answer)?'#15803d':'#dc2626' }}>
+                  {selected===(q.ans||q.answer)
                     ? (isLate ? 'Correct! (Take your time next time ⏱)' : 'Correct!')
-                    : `Answer: ${q.ans}`}
+                    : `Answer: ${q.ans || q.answer}`}
                 </div>
-                {q.exp && <div style={{ fontSize:12, color:'#4b5563', marginTop:3, lineHeight:1.5 }}>{q.exp}</div>}
+                {(q.exp || q.explanation) &&
+                  <div style={{ fontSize:12, color:'#4b5563', marginTop:3, lineHeight:1.5 }}>
+                    {q.exp || q.explanation}
+                  </div>
+                }
               </div>
             </div>
             <button className="primary-btn" style={{ background:subj?.color }} onClick={handleNext}>
@@ -526,10 +573,7 @@ function SignupScreen({ setScreen, goHome }) {
   const [pass2,  setPass2]  = useState('');
   const [err,    setErr]    = useState('');
 
-  const GRADES = [
-    'Grade 5','Grade 6','Grade 7',
-    'Grade 8','Grade 9','Grade 10','Other'
-  ];
+  const GRADES = ['Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Other'];
 
   function handleSave(e) {
     e.preventDefault();
@@ -548,6 +592,8 @@ function SignupScreen({ setScreen, goHome }) {
       grade,
       parentPin:        pin,
       parentPinChanged: false,
+      streak:           0,
+      lastPracticeDate: null,
     });
     setScreen('signup_done');
   }
@@ -564,55 +610,26 @@ function SignupScreen({ setScreen, goHome }) {
       </div>
       <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18, overflowY:'auto' }}>
         <form onSubmit={handleSave} style={{ display:'flex', flexDirection:'column' }}>
-
           <label className="lbl">Your Name</label>
-          <input className="field" value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="e.g. Arjun Sharma" />
-
+          <input className="field" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Arjun Sharma" />
           <label className="lbl">Email Address</label>
-          <input className="field" type="email" value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="your@email.com" />
-
+          <input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" />
           <label className="lbl">Mobile Number</label>
-          <input className="field" type="tel" value={mobile}
-            onChange={e => setMobile(e.target.value)}
-            placeholder="+91 98765 43210" />
-
+          <input className="field" type="tel" value={mobile} onChange={e=>setMobile(e.target.value)} placeholder="+91 98765 43210" />
           <label className="lbl">Your Grade</label>
-          <select className="field" value={grade}
-            onChange={e => setGrade(e.target.value)}>
+          <select className="field" value={grade} onChange={e=>setGrade(e.target.value)}>
             <option value="">Select grade...</option>
-            {GRADES.map(g => (
-              <option key={g} value={g}>{g}</option>
-            ))}
+            {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
           </select>
-
           <label className="lbl">Password</label>
-          <input className="field" type="password" value={pass}
-            onChange={e => setPass(e.target.value)}
-            placeholder="At least 6 characters" />
-
+          <input className="field" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="At least 6 characters" />
           <label className="lbl">Confirm Password</label>
-          <input className="field" type="password" value={pass2}
-            onChange={e => setPass2(e.target.value)}
-            placeholder="Retype password" />
-
+          <input className="field" type="password" value={pass2} onChange={e=>setPass2(e.target.value)} placeholder="Retype password" />
           {err && <div className="error-box">{err}</div>}
-
-          <button type="submit" className="primary-btn">
-            Create Account →
-          </button>
+          <button type="submit" className="primary-btn">Create Account →</button>
         </form>
-
-        <button className="secondary-btn" onClick={goHome}>
-          Skip for now
-        </button>
-
-        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>
-          Your data is private and never shared.
-        </p>
+        <button className="secondary-btn" onClick={goHome}>Skip for now</button>
+        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>Your data is private and never shared.</p>
       </div>
     </div>
   );
@@ -658,8 +675,8 @@ function ParentLogin({ setScreen, goHome }) {
   function handleLogin(e) {
     e.preventDefault();
     setErr('');
-    if (!email.trim())   { setErr("Please enter the student's email."); return; }
-    if (pin.length < 6)  { setErr('Please enter the full 6-digit PIN.'); return; }
+    if (!email.trim())  { setErr("Please enter the student's email."); return; }
+    if (pin.length < 6) { setErr('Please enter the full 6-digit PIN.'); return; }
     if (!user || user.email.toLowerCase() !== email.trim().toLowerCase())
       { setErr('No student found with this email.'); return; }
     if (pin !== user.parentPin) { setErr('Incorrect PIN. Please try again.'); return; }
@@ -765,7 +782,6 @@ function ParentDashboard({ setScreen, goHome }) {
           const oa        = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
           const oaColor   = oa===null?'#d1d5db':oa>=70?'#16a34a':oa>=50?'#d97706':'#dc2626';
 
-          // Group by level for display
           const byLevel = {};
           for (const t of breakdown) {
             if (!byLevel[t.levelLabel]) byLevel[t.levelLabel] = [];
@@ -788,7 +804,6 @@ function ParentDashboard({ setScreen, goHome }) {
 
               {breakdown.length > 0 ? (
                 <>
-                  {/* Grouped by level */}
                   {Object.entries(byLevel).map(([lvlLabel, topics]) => (
                     <div key={lvlLabel} style={{ marginBottom:12 }}>
                       <div style={{ fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:1, marginBottom:6, padding:'4px 8px', background:'#f3f4f6', borderRadius:6 }}>
@@ -805,14 +820,13 @@ function ParentDashboard({ setScreen, goHome }) {
                               {t.score===null?'—':`${t.score}%`}
                             </span>
                             <span style={{ fontSize:10, background:t.needsWork?'#fee2e2':subj.light, color:t.needsWork?'#dc2626':subj.color, borderRadius:99, padding:'2px 7px', fontWeight:700, minWidth:44, textAlign:'center' }}>
-                              {t.needsWork?'⚠ Weak':['Easy','Medium','Hard'][t.diffLevel]}
+                              {t.mastered ? '⭐ Done' : t.needsWork ? '⚠ Weak' : ['Easy','Medium','Hard'][t.diffLevel]}
                             </span>
                           </div>
                         ))}
                       </div>
                     </div>
                   ))}
-
                   {breakdown.filter(t=>t.needsWork).length > 0
                     ? <div style={{ background:'#fef3c7', borderRadius:10, padding:'10px 14px', fontSize:13, color:'#92400e', fontWeight:600 }}>
                         ⚠ Needs attention: {breakdown.filter(t=>t.needsWork).map(t=>t.label).join(', ')}
