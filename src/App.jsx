@@ -230,7 +230,7 @@ function HomeScreen({ setScreen, startSubject }) {
 
       {/* Body */}
       <div style={{ padding:'0 14px', marginTop:-20 }}>
-        <div style={{ fontFamily:"'Syne',system-ui", fontSize:15, fontWeight:700, color:'#1e1b4b', margin:'10px 0' }}>Pick a subject to practise</div>
+  <div style={{ fontFamily:"'Syne',system-ui", fontSize:15, fontWeight:700, color:'#1e1b4b', margin:'28px 0 10px' }}>Pick a subject to practise</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:11 }}>
           {SUBJECTS.map((s, i) => {
             const avg  = avgForSubj(s.id);
