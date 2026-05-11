@@ -70,7 +70,23 @@ export default function App() {
   const [screen, setScreen]               = useState('home');
   const [activeSubject, setActiveSubject] = useState(null);
   const [sessionResult, setSessionResult] = useState(null);
-  const { isLoggedIn } = useStore();
+  const { isLoggedIn, questionsCache, setQuestionsCache } = useStore();
+
+  // Load questions from Supabase on app start
+  useEffect(() => {
+    async function loadQuestions() {
+      try {
+        const { fetchAllQuestions } = await import('./lib/supabase_sync');
+        const cache = await fetchAllQuestions();
+        if (cache) {
+          setQuestionsCache(cache);
+        }
+      } catch (err) {
+        console.error('Question load failed — using local questions:', err);
+      }
+    }
+    loadQuestions();
+  }, []);
 
   const subj = SUBJECTS.find(s => s.id === activeSubject);
 
@@ -355,7 +371,7 @@ function SignupScreen({ setScreen, goHome }) {
 
   const GRADES = ['Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Other'];
 
-  function handleSave(e) {
+  async function handleSave(e) {
     e.preventDefault();
     if (!name.trim())         { setErr('Please enter your name.'); return; }
     if (!email.includes('@')) { setErr('Please enter a valid email.'); return; }
@@ -363,21 +379,19 @@ function SignupScreen({ setScreen, goHome }) {
     if (!grade)               { setErr('Please select your grade.'); return; }
     if (pass.length < 6)      { setErr('Password must be at least 6 characters.'); return; }
     if (pass !== pass2)       { setErr('Passwords do not match.'); return; }
-
-    const pin = genPin();
-    useStore.getState().login({
-      id:               Date.now() + '',
-      name:             name.trim(),
-      email:            email.trim().toLowerCase(),
-      mobile:           mobile.trim(),
-      grade,
-      password:         pass,
-      parentPin:        pin,
-      parentPinChanged: false,
-      streak:           0,
-      lastPracticeDate: null,
-    });
-    setScreen('signup_done');
+    setErr('');
+    try {
+      await useStore.getState().register({
+        name:     name.trim(),
+        email:    email.trim().toLowerCase(),
+        mobile:   mobile.trim(),
+        grade,
+        password: pass,
+      });
+      setScreen('signup_done');
+    } catch (err) {
+      setErr('Something went wrong. Please try again.');
+    }
   }
 
   return (
@@ -465,8 +479,11 @@ function SignupDone({ setScreen, goHome }) {
 
 // ─── PRACTICE ──────────────────────────────────────────────────────────────
 function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
-  const { topicRecords, sessionHistory, isGuestLimited, recordAnswer } = useStore();
-  const allQs = QB[subject] || [];
+  const { topicRecords, sessionHistory, isGuestLimited, recordAnswer, questionsCache } = useStore();
+  // Use Supabase questions if loaded, fallback to local questions.js
+  const allQs = (questionsCache && questionsCache[subject]?.length > 0)
+    ? questionsCache[subject]
+    : (QB[subject] || []);
 
   const [current,   setCurrent]   = useState(null);
   const [selected,  setSelected]  = useState(null);
