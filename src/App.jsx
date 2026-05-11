@@ -72,27 +72,26 @@ export default function App() {
   const [sessionResult, setSessionResult] = useState(null);
   const { isLoggedIn, questionsCache, setQuestionsCache } = useStore();
 
-  // Load questions from Supabase on app start
   useEffect(() => {
-async function loadQuestions() {
-  console.log('Leap IQ: Loading questions from Supabase...');
-  try {
-    const { fetchAllQuestions } = await import('./lib/supabase_sync');
-    console.log('Leap IQ: supabase_sync imported OK');
-    const cache = await fetchAllQuestions();
-    console.log('Leap IQ: fetchAllQuestions result:', cache);
-    if (cache) {
-      setQuestionsCache(cache);
-      console.log('Leap IQ: Questions loaded —',
-        Object.entries(cache).map(([k,v]) => `${k}:${v.length}`).join(', ')
-      );
-    } else {
-      console.warn('Leap IQ: fetchAllQuestions returned null — check Supabase');
+    async function loadQuestions() {
+      console.log('Leap IQ: Loading questions from Supabase...');
+      try {
+        const { fetchAllQuestions } = await import('./lib/supabase_sync');
+        console.log('Leap IQ: supabase_sync imported OK');
+        const cache = await fetchAllQuestions();
+        console.log('Leap IQ: fetchAllQuestions result:', cache);
+        if (cache) {
+          setQuestionsCache(cache);
+          console.log('Leap IQ: Questions loaded —',
+            Object.entries(cache).map(([k,v]) => `${k}:${v.length}`).join(', ')
+          );
+        } else {
+          console.warn('Leap IQ: fetchAllQuestions returned null — check Supabase');
+        }
+      } catch (err) {
+        console.error('Leap IQ: Question load failed:', err.message, err);
+      }
     }
-  } catch (err) {
-    console.error('Leap IQ: Question load failed:', err.message, err);
-  }
-}
     loadQuestions();
   }, []);
 
@@ -182,14 +181,12 @@ function HomeScreen({ setScreen, startSubject }) {
         <div style={{ padding:'6px 18px 0' }}>
           <h1 style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff', margin:'0 0 6px' }}>{greeting}</h1>
           <p style={{ color:'rgba(255,255,255,0.8)', fontSize:13, margin:'0 0 12px', lineHeight:1.5 }}>{sub}</p>
-
           {user?.streak > 1 && (
             <div style={{ background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'8px 14px', marginBottom:14, display:'inline-flex', alignItems:'center', gap:8 }}>
               <span style={{ fontSize:20 }}>🔥</span>
               <span style={{ color:'#fff', fontWeight:700, fontSize:13 }}>{user.streak} day streak! Keep it going!</span>
             </div>
           )}
-
           <div style={{ display:'flex', gap:8 }}>
             {SUBJECTS.map(s => (
               <div key={s.id} style={{ flex:1, background:'rgba(255,255,255,0.1)', borderRadius:12, padding:'10px 6px', textAlign:'center' }}>
@@ -201,7 +198,6 @@ function HomeScreen({ setScreen, startSubject }) {
           </div>
         </div>
       </div>
-
       <div style={{ padding:'0 14px', marginTop:-20 }}>
         <div style={{ fontFamily:"'Syne',system-ui", fontSize:15, fontWeight:700, color:'#1e1b4b', margin:'28px 0 10px' }}>Pick a subject to practise</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:11 }}>
@@ -231,7 +227,6 @@ function HomeScreen({ setScreen, startSubject }) {
             );
           })}
         </div>
-
         <div className="info-card" style={{ marginTop:14, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div>
             <div style={{ fontFamily:"'Syne',system-ui", fontSize:13, fontWeight:700, color:'#111' }}>👨‍👩‍👧 Parent / Teacher Portal</div>
@@ -240,7 +235,6 @@ function HomeScreen({ setScreen, startSubject }) {
           <button style={{ background:'#1e1b4b', border:'none', color:'#fff', borderRadius:10, padding:'8px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:700, fontSize:13 }}
             onClick={() => setScreen('parent_login')}>Login →</button>
         </div>
-
         {!isLoggedIn && (
           <div style={{ background:'linear-gradient(135deg,#4338ca,#7c3aed)', borderRadius:14, padding:'14px 18px', color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', textAlign:'center', marginTop:12, marginBottom:20 }}
             onClick={() => setScreen('signup')}>
@@ -253,7 +247,7 @@ function HomeScreen({ setScreen, startSubject }) {
   );
 }
 
-// ─── AUTH PROMPT — shown after 10 guest questions ──────────────────────────
+// ─── AUTH PROMPT ───────────────────────────────────────────────────────────
 function AuthPrompt({ setScreen, goHome }) {
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
@@ -263,30 +257,18 @@ function AuthPrompt({ setScreen, goHome }) {
         <div style={{ color:'rgba(255,255,255,0.85)', fontSize:14, lineHeight:1.6 }}>Sign in or create a free account to keep practising and save your progress.</div>
       </div>
       <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18 }}>
-
-        {/* Already have account */}
         <div style={{ background:'#f0effe', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
           <div style={{ fontSize:13, fontWeight:700, color:'#4338ca', marginBottom:4 }}>Already have an account?</div>
           <div style={{ fontSize:12, color:'#6b7280', marginBottom:14 }}>Sign in to continue where you left off.</div>
-          <button className="primary-btn" onClick={() => setScreen('signin')}>
-            Sign In →
-          </button>
+          <button className="primary-btn" onClick={() => setScreen('signin')}>Sign In →</button>
         </div>
-
-        {/* New user */}
         <div style={{ background:'#f0fdf4', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
           <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:4 }}>New to Leap IQ?</div>
           <div style={{ fontSize:12, color:'#6b7280', marginBottom:14 }}>Create a free account — takes 30 seconds.</div>
           <button style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#166534', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}
-            onClick={() => setScreen('signup')}>
-            Create Free Account →
-          </button>
+            onClick={() => setScreen('signup')}>Create Free Account →</button>
         </div>
-
-        <button className="secondary-btn" onClick={goHome}>
-          Maybe later — go home
-        </button>
-
+        <button className="secondary-btn" onClick={goHome}>Maybe later — go home</button>
         <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>
           Free forever · No credit card needed · Your data stays private
         </p>
@@ -305,21 +287,11 @@ function SigninScreen({ setScreen, goHome }) {
   function handleSignin(e) {
     e.preventDefault();
     setErr('');
-    if (!email.trim())   { setErr('Please enter your email.'); return; }
-    if (!pass.trim())    { setErr('Please enter your password.'); return; }
-
-    // Check against stored user
-    if (!user) {
-      setErr('No account found on this device. Please register first.'); return;
-    }
-    if (user.email.toLowerCase() !== email.trim().toLowerCase()) {
-      setErr('Email not found. Please check or register.'); return;
-    }
-    if (user.password !== pass) {
-      setErr('Incorrect password. Please try again.'); return;
-    }
-
-    // Sign in — user data already in store, just mark as logged in
+    if (!email.trim()) { setErr('Please enter your email.'); return; }
+    if (!pass.trim())  { setErr('Please enter your password.'); return; }
+    if (!user) { setErr('No account found on this device. Please register first.'); return; }
+    if (user.email.toLowerCase() !== email.trim().toLowerCase()) { setErr('Email not found. Please check or register.'); return; }
+    if (user.password !== pass) { setErr('Incorrect password. Please try again.'); return; }
     useStore.getState().login(user);
     showToast(`Welcome back, ${user.name?.split(' ')[0]}! 👋`, '#4338ca');
     goHome();
@@ -338,30 +310,17 @@ function SigninScreen({ setScreen, goHome }) {
       <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18, overflowY:'auto' }}>
         <form onSubmit={handleSignin} style={{ display:'flex', flexDirection:'column' }}>
           <label className="lbl">Email Address</label>
-          <input className="field" type="email" value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="your@email.com" />
-
+          <input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" />
           <label className="lbl">Password</label>
-          <input className="field" type="password" value={pass}
-            onChange={e => setPass(e.target.value)}
-            placeholder="Your password" />
-
+          <input className="field" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Your password" />
           {err && <div className="error-box">{err}</div>}
-
           <button type="submit" className="primary-btn">Sign In →</button>
         </form>
-
         <div style={{ textAlign:'center', marginTop:20 }}>
           <div style={{ fontSize:13, color:'#6b7280', marginBottom:10 }}>Don't have an account yet?</div>
-          <button className="secondary-btn" onClick={() => setScreen('signup')}>
-            Create Free Account →
-          </button>
+          <button className="secondary-btn" onClick={() => setScreen('signup')}>Create Free Account →</button>
         </div>
-
-        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>
-          Your data is private and never shared.
-        </p>
+        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>Your data is private and never shared.</p>
       </div>
     </div>
   );
@@ -390,11 +349,8 @@ function SignupScreen({ setScreen, goHome }) {
     setErr('');
     try {
       await useStore.getState().register({
-        name:     name.trim(),
-        email:    email.trim().toLowerCase(),
-        mobile:   mobile.trim(),
-        grade,
-        password: pass,
+        name: name.trim(), email: email.trim().toLowerCase(),
+        mobile: mobile.trim(), grade, password: pass,
       });
       setScreen('signup_done');
     } catch (err) {
@@ -416,40 +372,28 @@ function SignupScreen({ setScreen, goHome }) {
         <form onSubmit={handleSave} style={{ display:'flex', flexDirection:'column' }}>
           <label className="lbl">Your Name</label>
           <input className="field" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Arjun Sharma" />
-
           <label className="lbl">Email Address</label>
           <input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" />
-
           <label className="lbl">Mobile Number</label>
           <input className="field" type="tel" value={mobile} onChange={e=>setMobile(e.target.value)} placeholder="+91 98765 43210" />
-
           <label className="lbl">Your Grade</label>
           <select className="field" value={grade} onChange={e=>setGrade(e.target.value)}>
             <option value="">Select grade...</option>
             {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
           </select>
-
           <label className="lbl">Password</label>
           <input className="field" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="At least 6 characters" />
-
           <label className="lbl">Confirm Password</label>
           <input className="field" type="password" value={pass2} onChange={e=>setPass2(e.target.value)} placeholder="Retype password" />
-
           {err && <div className="error-box">{err}</div>}
-
           <button type="submit" className="primary-btn">Create Account →</button>
         </form>
-
         <div style={{ textAlign:'center', marginTop:16 }}>
           <div style={{ fontSize:13, color:'#6b7280', marginBottom:8 }}>Already have an account?</div>
           <button className="secondary-btn" onClick={() => setScreen('signin')}>Sign In →</button>
         </div>
-
         <button className="secondary-btn" style={{ marginTop:8 }} onClick={goHome}>Skip for now</button>
-
-        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>
-          Your data is private and never shared.
-        </p>
+        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>Your data is private and never shared.</p>
       </div>
     </div>
   );
@@ -488,7 +432,6 @@ function SignupDone({ setScreen, goHome }) {
 // ─── PRACTICE ──────────────────────────────────────────────────────────────
 function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
   const { topicRecords, sessionHistory, isGuestLimited, recordAnswer, questionsCache } = useStore();
-  // Use Supabase questions if loaded, fallback to local questions.js
   const allQs = (questionsCache && questionsCache[subject]?.length > 0)
     ? questionsCache[subject]
     : (QB[subject] || []);
@@ -507,10 +450,8 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
 
   function loadNext() {
     if (isGuestLimited(subject)) { onLoginRequired(); return; }
-
     const res = selectNextQuestion(allQs, topicRecords, sessionHistory.length, recentIds, subject);
     if (!res) return;
-
     const { question: q } = res;
     const { shown } = getTimers(subject, q.category || '', q.difficulty || 'easy');
     setCurrent(res);
@@ -533,13 +474,16 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     if (answered) return;
     clearInterval(timerRef.current);
 
-    const q        = current.question;
-    // answer can be letter "C" or full text "90" — handle both
-    const rawAnswer = q.ans || q.answer;
-    const answerText = rawAnswer?.length === 1 && 'ABCD'.includes(rawAnswer.toUpperCase())
-    ? opts['ABCD'.indexOf(rawAnswer.toUpperCase())]  // convert C → opts[2] → "90"
-    : rawAnswer;                                       // already full text
-    const correct = opt === answerText;
+    const q    = current.question;
+    const opts = q.opts || [q.option_a, q.option_b, q.option_c, q.option_d];
+
+    // Convert letter answer (A/B/C/D) to actual option text
+    const rawAns  = q.ans || q.answer || '';
+    const ansText = rawAns.length === 1 && 'ABCD'.includes(rawAns.toUpperCase())
+      ? opts['ABCD'.indexOf(rawAns.toUpperCase())]
+      : rawAns;
+
+    const correct  = opt === ansText;
     const diff     = q.difficulty || 'easy';
     const category = q.category   || '';
     const level    = String(q.question_level || q.level || q.grade || '6');
@@ -577,15 +521,15 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     </div>
   );
 
-    const q        = current.question;
-    const pct      = Math.max(0, Math.round((timer / timerMax) * 100));
-    const diffLabel = q.difficulty ? q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1) : 'Easy';
-    const opts      = q.opts || [q.option_a, q.option_b, q.option_c, q.option_d];
-    const rawAnswer = q.ans || q.answer || '';
-    // Convert letter answer (A/B/C/D) to actual option text
-    const ans = rawAnswer.length === 1 && 'ABCD'.includes(rawAnswer.toUpperCase())
-      ? opts['ABCD'.indexOf(rawAnswer.toUpperCase())]
-      : rawAnswer;
+  const q         = current.question;
+  const opts      = q.opts || [q.option_a, q.option_b, q.option_c, q.option_d];
+  const rawAnswer = q.ans || q.answer || '';
+  // Convert letter answer (A/B/C/D) to actual option text for display
+  const ans = rawAnswer.length === 1 && 'ABCD'.includes(rawAnswer.toUpperCase())
+    ? opts['ABCD'.indexOf(rawAnswer.toUpperCase())]
+    : rawAnswer;
+  const pct       = Math.max(0, Math.round((timer / timerMax) * 100));
+  const diffLabel = q.difficulty ? q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1) : 'Easy';
 
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
@@ -636,7 +580,6 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
             );
           })}
         </div>
-
         {answered && (
           <>
             <div style={{ borderRadius:13, padding:14, background:selected===ans?'#dcfce7':'#fee2e2', display:'flex', gap:9, alignItems:'flex-start', marginBottom:12 }}>
@@ -652,7 +595,6 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
           </>
         )}
       </div>
-
       {!answered && (
         <div style={{ position:'fixed', bottom:20, left:0, right:0, display:'flex', justifyContent:'center' }}>
           <button onClick={handlePracticeLater} style={{ background:'rgba(30,27,75,0.9)', color:'#fff', border:'none', borderRadius:99, padding:'12px 28px', fontFamily:'inherit', fontWeight:700, fontSize:14, cursor:'pointer' }}>
@@ -830,7 +772,6 @@ function ParentChangePin({ setScreen, goHome }) {
 // ─── PARENT DASHBOARD ───────────────────────────────────────────────────────
 function ParentDashboard({ setScreen, goHome }) {
   const { topicRecords, sessionHistory, user } = useStore();
-
   return (
     <div style={{ minHeight:'100dvh' }}>
       <div style={{ background:'linear-gradient(135deg,#1e1b4b,#312e81)', padding:'20px 18px 40px' }}>
@@ -842,7 +783,6 @@ function ParentDashboard({ setScreen, goHome }) {
         <button style={{ marginTop:12, background:'rgba(255,255,255,0.15)', border:'none', color:'rgba(255,255,255,0.85)', borderRadius:8, padding:'6px 14px', cursor:'pointer', fontFamily:'inherit', fontWeight:600, fontSize:12 }}
           onClick={() => setScreen('parent_pin')}>🔑 Change PIN</button>
       </div>
-
       <div style={{ padding:'10px 16px 40px', marginTop:-12 }}>
         {SUBJECTS.map(subj => {
           const breakdown = fullTopicBreakdown(topicRecords, subj.id);
@@ -850,13 +790,11 @@ function ParentDashboard({ setScreen, goHome }) {
           const scores    = breakdown.filter(t => t.score !== null).map(t => t.score);
           const oa        = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
           const oaColor   = oa===null?'#d1d5db':oa>=70?'#16a34a':oa>=50?'#d97706':'#dc2626';
-
-          const byLevel = {};
+          const byLevel   = {};
           for (const t of breakdown) {
             if (!byLevel[t.levelLabel]) byLevel[t.levelLabel] = [];
             byLevel[t.levelLabel].push(t);
           }
-
           return (
             <div key={subj.id} className="info-card" style={{ marginBottom:14 }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
@@ -870,7 +808,6 @@ function ParentDashboard({ setScreen, goHome }) {
                   <div style={{ fontSize:10, color:'#9ca3af' }}>overall</div>
                 </div>
               </div>
-
               {breakdown.length > 0 ? (
                 <>
                   {Object.entries(byLevel).map(([lvlLabel, topics]) => (
@@ -911,7 +848,6 @@ function ParentDashboard({ setScreen, goHome }) {
             </div>
           );
         })}
-
         {sessionHistory.length > 0 && (
           <div className="info-card">
             <div style={{ fontFamily:"'Syne',system-ui", fontSize:14, fontWeight:700, color:'#111', marginBottom:12 }}>Recent Sessions</div>
