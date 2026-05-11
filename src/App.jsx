@@ -74,17 +74,25 @@ export default function App() {
 
   // Load questions from Supabase on app start
   useEffect(() => {
-    async function loadQuestions() {
-      try {
-        const { fetchAllQuestions } = await import('./lib/supabase_sync');
-        const cache = await fetchAllQuestions();
-        if (cache) {
-          setQuestionsCache(cache);
-        }
-      } catch (err) {
-        console.error('Question load failed — using local questions:', err);
-      }
+async function loadQuestions() {
+  console.log('Leap IQ: Loading questions from Supabase...');
+  try {
+    const { fetchAllQuestions } = await import('./lib/supabase_sync');
+    console.log('Leap IQ: supabase_sync imported OK');
+    const cache = await fetchAllQuestions();
+    console.log('Leap IQ: fetchAllQuestions result:', cache);
+    if (cache) {
+      setQuestionsCache(cache);
+      console.log('Leap IQ: Questions loaded —',
+        Object.entries(cache).map(([k,v]) => `${k}:${v.length}`).join(', ')
+      );
+    } else {
+      console.warn('Leap IQ: fetchAllQuestions returned null — check Supabase');
     }
+  } catch (err) {
+    console.error('Leap IQ: Question load failed:', err.message, err);
+  }
+}
     loadQuestions();
   }, []);
 
