@@ -534,7 +534,12 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     clearInterval(timerRef.current);
 
     const q        = current.question;
-    const correct  = opt === (q.ans || q.answer);
+    // answer can be letter "C" or full text "90" — handle both
+    const rawAnswer = q.ans || q.answer;
+    const answerText = rawAnswer?.length === 1 && 'ABCD'.includes(rawAnswer.toUpperCase())
+    ? opts['ABCD'.indexOf(rawAnswer.toUpperCase())]  // convert C → opts[2] → "90"
+    : rawAnswer;                                       // already full text
+    const correct = opt === answerText;
     const diff     = q.difficulty || 'easy';
     const category = q.category   || '';
     const level    = String(q.question_level || q.level || q.grade || '6');
