@@ -14,7 +14,6 @@ const genPin = () => String(Math.floor(100000 + Math.random() * 900000));
 const OK_MSGS    = ["You got it! ⭐","Doing great! 🔥","Awesome! 🎉","Brilliant! 🚀","Keep it up! 💪","Superstar! 🌟","Nailed it! ✨","Amazing! 🏆"];
 const WRONG_MSGS = ["Almost! Keep going 💪","Good try! Next one! 🚀","You've got this! 💫","Learning in action! ⭐"];
 
-// ─── CSS ───────────────────────────────────────────────────────────────────
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Syne:wght@700;800&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -46,47 +45,6 @@ body{-webkit-font-smoothing:antialiased;}
 @media(min-width:480px){body>div{max-width:480px;margin:0 auto;box-shadow:0 0 60px rgba(0,0,0,0.12);}}
 `;
 
-// ─── PIN INPUT ─────────────────────────────────────────────────────────────
-function PinInput({ onComplete }) {
-  const refs = useRef([]);
-  const [vals, setVals] = useState(['','','','','','']);
-  const [hasError, setHasError] = useState(false);
-
-  function handleChange(i, v) {
-    const digit = v.replace(/\D/,'').slice(-1);
-    const next = [...vals]; next[i] = digit;
-    setVals(next);
-    if (digit && i < 5) refs.current[i+1]?.focus();
-    if (next.every(d => d)) onComplete?.(next.join(''));
-  }
-  function handleKey(i, e) {
-    if (e.key === 'Backspace' && !vals[i] && i > 0) refs.current[i-1]?.focus();
-  }
-  function handlePaste(e) {
-    e.preventDefault();
-    const p = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);
-    const next = ['','','','','',''];
-    p.split('').forEach((c,i) => { next[i] = c; });
-    setVals(next);
-    refs.current[Math.min(p.length,5)]?.focus();
-    if (next.every(d => d)) onComplete?.(next.join(''));
-  }
-
-  return (
-    <div className="pin-box">
-      {vals.map((v,i) => (
-        <input key={i} ref={el => refs.current[i]=el} type="tel" maxLength={1} value={v}
-          className={`pin-digit${hasError?' pin-error':''}`}
-          onChange={e => handleChange(i, e.target.value)}
-          onKeyDown={e => handleKey(i, e)}
-          onPaste={handlePaste}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ─── TOAST ─────────────────────────────────────────────────────────────────
 function showToast(msg, bg='#1e1b4b') {
   const t = document.createElement('div');
   t.textContent = msg;
@@ -100,7 +58,6 @@ function showToast(msg, bg='#1e1b4b') {
   setTimeout(() => t.remove(), 2100);
 }
 
-// ─── LEVEL UP TOAST ────────────────────────────────────────────────────────
 function showLevelUpToast(msg) {
   const t = document.createElement('div');
   t.className = 'level-toast';
@@ -109,7 +66,6 @@ function showLevelUpToast(msg) {
   setTimeout(() => t.remove(), 3600);
 }
 
-// ─── APP ───────────────────────────────────────────────────────────────────
 export default function App() {
   const [screen, setScreen]               = useState('home');
   const [activeSubject, setActiveSubject] = useState(null);
@@ -140,11 +96,13 @@ export default function App() {
     <div style={{ fontFamily:"'Nunito',system-ui,sans-serif", minHeight:'100dvh', background:'#f0effe', overflowX:'hidden' }}>
       <style>{CSS}</style>
       {screen === 'home'         && <HomeScreen       setScreen={setScreen} startSubject={startSubject} />}
-      {screen === 'practice'     && <PracticeScreen   setScreen={setScreen} subject={activeSubject} subj={subj} onEnd={onSessionEnd} onLoginRequired={() => setScreen('signup')} />}
+      {screen === 'practice'     && <PracticeScreen   setScreen={setScreen} subject={activeSubject} subj={subj} onEnd={onSessionEnd} onLoginRequired={() => setScreen('auth_prompt')} />}
       {screen === 'session_end'  && <SessionEndScreen setScreen={setScreen} result={sessionResult} subj={subj} startSubject={startSubject} goHome={goHome} />}
       {screen === 'report'       && <StudentReport    setScreen={setScreen} goHome={goHome} />}
+      {screen === 'signin'       && <SigninScreen     setScreen={setScreen} goHome={goHome} />}
       {screen === 'signup'       && <SignupScreen     setScreen={setScreen} goHome={goHome} />}
       {screen === 'signup_done'  && <SignupDone       setScreen={setScreen} goHome={goHome} />}
+      {screen === 'auth_prompt'  && <AuthPrompt       setScreen={setScreen} goHome={goHome} />}
       {screen === 'parent_login' && <ParentLogin      setScreen={setScreen} goHome={goHome} />}
       {screen === 'parent_pin'   && <ParentChangePin  setScreen={setScreen} goHome={goHome} />}
       {screen === 'parent_dash'  && <ParentDashboard  setScreen={setScreen} goHome={goHome} />}
@@ -178,10 +136,8 @@ function HomeScreen({ setScreen, startSubject }) {
 
   return (
     <div>
-      {/* Hero */}
       <div style={{ background:'linear-gradient(135deg,#1e1b4b 0%,#4338ca 60%,#7c3aed 100%)', padding:'0 0 52px', position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', top:-60, right:-60, width:220, height:220, borderRadius:'50%', background:'rgba(255,255,255,0.04)', pointerEvents:'none' }}/>
-        {/* Nav */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'18px' }}>
           <div>
             <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff' }}>🚀 Leap IQ</div>
@@ -190,32 +146,26 @@ function HomeScreen({ setScreen, startSubject }) {
           <div style={{ display:'flex', gap:8 }}>
             <button className="ghost-btn" onClick={() => setScreen('report')}>📊 Progress</button>
             {isLoggedIn
-              ? <button className="ghost-btn" onClick={() => useStore.getState().logout()}>Sign out</button>
-              : <button style={{ background:'#fff', border:'none', color:'#4338ca', borderRadius:'99px', padding:'7px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:800, fontSize:13 }}
-                  onClick={() => setScreen('signup')}>Sign in</button>
+              ? <button className="ghost-btn" onClick={() => { useStore.getState().logout(); showToast('Signed out 👋'); }}>Sign out</button>
+              : <>
+                  <button className="ghost-btn" onClick={() => setScreen('signin')}>Sign in</button>
+                  <button style={{ background:'#fff', border:'none', color:'#4338ca', borderRadius:'99px', padding:'7px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:800, fontSize:13 }}
+                    onClick={() => setScreen('signup')}>Register</button>
+                </>
             }
           </div>
         </div>
-        {/* Greeting */}
         <div style={{ padding:'6px 18px 0' }}>
           <h1 style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff', margin:'0 0 6px' }}>{greeting}</h1>
           <p style={{ color:'rgba(255,255,255,0.8)', fontSize:13, margin:'0 0 12px', lineHeight:1.5 }}>{sub}</p>
 
-          {/* Daily streak */}
           {user?.streak > 1 && (
-            <div style={{
-              background:'rgba(255,255,255,0.15)', borderRadius:10,
-              padding:'8px 14px', marginBottom:14,
-              display:'inline-flex', alignItems:'center', gap:8
-            }}>
+            <div style={{ background:'rgba(255,255,255,0.15)', borderRadius:10, padding:'8px 14px', marginBottom:14, display:'inline-flex', alignItems:'center', gap:8 }}>
               <span style={{ fontSize:20 }}>🔥</span>
-              <span style={{ color:'#fff', fontWeight:700, fontSize:13 }}>
-                {user.streak} day streak! Keep it going!
-              </span>
+              <span style={{ color:'#fff', fontWeight:700, fontSize:13 }}>{user.streak} day streak! Keep it going!</span>
             </div>
           )}
 
-          {/* Stats row */}
           <div style={{ display:'flex', gap:8 }}>
             {SUBJECTS.map(s => (
               <div key={s.id} style={{ flex:1, background:'rgba(255,255,255,0.1)', borderRadius:12, padding:'10px 6px', textAlign:'center' }}>
@@ -228,9 +178,8 @@ function HomeScreen({ setScreen, startSubject }) {
         </div>
       </div>
 
-      {/* Body */}
       <div style={{ padding:'0 14px', marginTop:-20 }}>
-  <div style={{ fontFamily:"'Syne',system-ui", fontSize:15, fontWeight:700, color:'#1e1b4b', margin:'28px 0 10px' }}>Pick a subject to practise</div>
+        <div style={{ fontFamily:"'Syne',system-ui", fontSize:15, fontWeight:700, color:'#1e1b4b', margin:'28px 0 10px' }}>Pick a subject to practise</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:11 }}>
           {SUBJECTS.map((s, i) => {
             const avg  = avgForSubj(s.id);
@@ -259,7 +208,6 @@ function HomeScreen({ setScreen, startSubject }) {
           })}
         </div>
 
-        {/* Parent Portal */}
         <div className="info-card" style={{ marginTop:14, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div>
             <div style={{ fontFamily:"'Syne',system-ui", fontSize:13, fontWeight:700, color:'#111' }}>👨‍👩‍👧 Parent / Teacher Portal</div>
@@ -272,10 +220,244 @@ function HomeScreen({ setScreen, startSubject }) {
         {!isLoggedIn && (
           <div style={{ background:'linear-gradient(135deg,#4338ca,#7c3aed)', borderRadius:14, padding:'14px 18px', color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', textAlign:'center', marginTop:12, marginBottom:20 }}
             onClick={() => setScreen('signup')}>
-            📬 Sign in to save your progress →
+            📬 Register to save your progress →
           </div>
         )}
         <div style={{ height:20 }}/>
+      </div>
+    </div>
+  );
+}
+
+// ─── AUTH PROMPT — shown after 10 guest questions ──────────────────────────
+function AuthPrompt({ setScreen, goHome }) {
+  return (
+    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
+        <div style={{ fontSize:56, marginBottom:8 }}>🚀</div>
+        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>You're on a roll!</div>
+        <div style={{ color:'rgba(255,255,255,0.85)', fontSize:14, lineHeight:1.6 }}>Sign in or create a free account to keep practising and save your progress.</div>
+      </div>
+      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18 }}>
+
+        {/* Already have account */}
+        <div style={{ background:'#f0effe', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#4338ca', marginBottom:4 }}>Already have an account?</div>
+          <div style={{ fontSize:12, color:'#6b7280', marginBottom:14 }}>Sign in to continue where you left off.</div>
+          <button className="primary-btn" onClick={() => setScreen('signin')}>
+            Sign In →
+          </button>
+        </div>
+
+        {/* New user */}
+        <div style={{ background:'#f0fdf4', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:4 }}>New to Leap IQ?</div>
+          <div style={{ fontSize:12, color:'#6b7280', marginBottom:14 }}>Create a free account — takes 30 seconds.</div>
+          <button style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#166534', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}
+            onClick={() => setScreen('signup')}>
+            Create Free Account →
+          </button>
+        </div>
+
+        <button className="secondary-btn" onClick={goHome}>
+          Maybe later — go home
+        </button>
+
+        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>
+          Free forever · No credit card needed · Your data stays private
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── SIGN IN ───────────────────────────────────────────────────────────────
+function SigninScreen({ setScreen, goHome }) {
+  const { user } = useStore();
+  const [email, setEmail] = useState('');
+  const [pass,  setPass]  = useState('');
+  const [err,   setErr]   = useState('');
+
+  function handleSignin(e) {
+    e.preventDefault();
+    setErr('');
+    if (!email.trim())   { setErr('Please enter your email.'); return; }
+    if (!pass.trim())    { setErr('Please enter your password.'); return; }
+
+    // Check against stored user
+    if (!user) {
+      setErr('No account found on this device. Please register first.'); return;
+    }
+    if (user.email.toLowerCase() !== email.trim().toLowerCase()) {
+      setErr('Email not found. Please check or register.'); return;
+    }
+    if (user.password !== pass) {
+      setErr('Incorrect password. Please try again.'); return;
+    }
+
+    // Sign in — user data already in store, just mark as logged in
+    useStore.getState().login(user);
+    showToast(`Welcome back, ${user.name?.split(' ')[0]}! 👋`, '#4338ca');
+    goHome();
+  }
+
+  return (
+    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
+        <div style={{ textAlign:'left', marginBottom:8 }}>
+          <button className="back-btn" onClick={goHome}>← Back</button>
+        </div>
+        <div style={{ fontSize:48, marginBottom:8 }}>👋</div>
+        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Welcome back!</div>
+        <div style={{ color:'rgba(255,255,255,0.75)', fontSize:14 }}>Sign in to continue your learning journey</div>
+      </div>
+      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18, overflowY:'auto' }}>
+        <form onSubmit={handleSignin} style={{ display:'flex', flexDirection:'column' }}>
+          <label className="lbl">Email Address</label>
+          <input className="field" type="email" value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="your@email.com" />
+
+          <label className="lbl">Password</label>
+          <input className="field" type="password" value={pass}
+            onChange={e => setPass(e.target.value)}
+            placeholder="Your password" />
+
+          {err && <div className="error-box">{err}</div>}
+
+          <button type="submit" className="primary-btn">Sign In →</button>
+        </form>
+
+        <div style={{ textAlign:'center', marginTop:20 }}>
+          <div style={{ fontSize:13, color:'#6b7280', marginBottom:10 }}>Don't have an account yet?</div>
+          <button className="secondary-btn" onClick={() => setScreen('signup')}>
+            Create Free Account →
+          </button>
+        </div>
+
+        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>
+          Your data is private and never shared.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── SIGN UP ───────────────────────────────────────────────────────────────
+function SignupScreen({ setScreen, goHome }) {
+  const [name,   setName]   = useState('');
+  const [email,  setEmail]  = useState('');
+  const [mobile, setMobile] = useState('');
+  const [grade,  setGrade]  = useState('');
+  const [pass,   setPass]   = useState('');
+  const [pass2,  setPass2]  = useState('');
+  const [err,    setErr]    = useState('');
+
+  const GRADES = ['Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Other'];
+
+  function handleSave(e) {
+    e.preventDefault();
+    if (!name.trim())         { setErr('Please enter your name.'); return; }
+    if (!email.includes('@')) { setErr('Please enter a valid email.'); return; }
+    if (!mobile.trim())       { setErr('Please enter your mobile number.'); return; }
+    if (!grade)               { setErr('Please select your grade.'); return; }
+    if (pass.length < 6)      { setErr('Password must be at least 6 characters.'); return; }
+    if (pass !== pass2)       { setErr('Passwords do not match.'); return; }
+
+    const pin = genPin();
+    useStore.getState().login({
+      id:               Date.now() + '',
+      name:             name.trim(),
+      email:            email.trim().toLowerCase(),
+      mobile:           mobile.trim(),
+      grade,
+      password:         pass,
+      parentPin:        pin,
+      parentPinChanged: false,
+      streak:           0,
+      lastPracticeDate: null,
+    });
+    setScreen('signup_done');
+  }
+
+  return (
+    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
+        <div style={{ textAlign:'left', marginBottom:8 }}>
+          <button className="back-btn" onClick={goHome}>← Back</button>
+        </div>
+        <div style={{ fontSize:48, marginBottom:8 }}>🚀</div>
+        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Join Leap IQ</div>
+        <div style={{ color:'rgba(255,255,255,0.75)', fontSize:14 }}>Free to start · Track your progress</div>
+      </div>
+      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18, overflowY:'auto' }}>
+        <form onSubmit={handleSave} style={{ display:'flex', flexDirection:'column' }}>
+          <label className="lbl">Your Name</label>
+          <input className="field" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Arjun Sharma" />
+
+          <label className="lbl">Email Address</label>
+          <input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" />
+
+          <label className="lbl">Mobile Number</label>
+          <input className="field" type="tel" value={mobile} onChange={e=>setMobile(e.target.value)} placeholder="+91 98765 43210" />
+
+          <label className="lbl">Your Grade</label>
+          <select className="field" value={grade} onChange={e=>setGrade(e.target.value)}>
+            <option value="">Select grade...</option>
+            {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+
+          <label className="lbl">Password</label>
+          <input className="field" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="At least 6 characters" />
+
+          <label className="lbl">Confirm Password</label>
+          <input className="field" type="password" value={pass2} onChange={e=>setPass2(e.target.value)} placeholder="Retype password" />
+
+          {err && <div className="error-box">{err}</div>}
+
+          <button type="submit" className="primary-btn">Create Account →</button>
+        </form>
+
+        <div style={{ textAlign:'center', marginTop:16 }}>
+          <div style={{ fontSize:13, color:'#6b7280', marginBottom:8 }}>Already have an account?</div>
+          <button className="secondary-btn" onClick={() => setScreen('signin')}>Sign In →</button>
+        </div>
+
+        <button className="secondary-btn" style={{ marginTop:8 }} onClick={goHome}>Skip for now</button>
+
+        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>
+          Your data is private and never shared.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── SIGNUP DONE ────────────────────────────────────────────────────────────
+function SignupDone({ setScreen, goHome }) {
+  const { user } = useStore();
+  const pin = user?.parentPin || '------';
+  return (
+    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
+      <div style={{ background:'linear-gradient(135deg,#059669,#0D9488)', padding:'32px 20px 48px', textAlign:'center' }}>
+        <div style={{ fontSize:56, marginBottom:8 }}>🎉</div>
+        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Welcome, {user?.name?.split(' ')[0]}!</div>
+        <div style={{ color:'rgba(255,255,255,0.85)', fontSize:14 }}>Your account is ready. Here's something important:</div>
+      </div>
+      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18 }}>
+        <div style={{ background:'#f0fdf4', border:'2px solid #86efac', borderRadius:16, padding:20, textAlign:'center', marginBottom:20 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#15803d', marginBottom:4 }}>🔑 Parent Access PIN</div>
+          <div style={{ fontFamily:"'Syne',system-ui", fontSize:36, fontWeight:800, color:'#166534', letterSpacing:6, margin:'12px 0' }}>{pin}</div>
+          <div style={{ fontSize:12, color:'#166534', lineHeight:1.6 }}>Share this with your parent or teacher so they can view your full progress report.</div>
+          <div style={{ fontSize:11, color:'#15803d', marginTop:10, fontWeight:600, background:'#dcfce7', borderRadius:8, padding:'8px 12px' }}>
+            ⚠ Your parent will set a private PIN on their first login.
+          </div>
+        </div>
+        <button style={{ width:'100%', padding:12, border:'1.5px solid #86efac', borderRadius:12, background:'#f0fdf4', color:'#15803d', fontFamily:'inherit', fontWeight:700, fontSize:14, cursor:'pointer', marginBottom:14 }}
+          onClick={() => { navigator.clipboard.writeText(pin).then(()=>showToast('PIN copied! 📋','#059669')).catch(()=>showToast(pin,'#059669')); }}>
+          📋 Copy PIN
+        </button>
+        <button className="primary-btn" onClick={goHome}>Let's Start Learning! 🚀</button>
       </div>
     </div>
   );
@@ -301,16 +483,11 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
   function loadNext() {
     if (isGuestLimited(subject)) { onLoginRequired(); return; }
 
-    const res = selectNextQuestion(
-      allQs, topicRecords, sessionHistory.length, recentIds, subject
-    );
+    const res = selectNextQuestion(allQs, topicRecords, sessionHistory.length, recentIds, subject);
     if (!res) return;
 
     const { question: q } = res;
-    const category = q.category || '';
-    const diff     = q.difficulty || 'easy';
-    const { shown } = getTimers(subject, category, diff);
-
+    const { shown } = getTimers(subject, q.category || '', q.difficulty || 'easy');
     setCurrent(res);
     setSelected(null);
     setAnswered(false);
@@ -332,61 +509,34 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     clearInterval(timerRef.current);
 
     const q        = current.question;
-    const correct  = opt === q.ans;
+    const correct  = opt === (q.ans || q.answer);
     const diff     = q.difficulty || 'easy';
     const category = q.category   || '';
     const level    = String(q.question_level || q.level || q.grade || '6');
 
-    // Calculate isLate using internal mastery threshold
     const { mastery } = getTimers(subject, category, diff);
     const timeTaken   = timerMax - timer;
-    const late        = mastery !== null
-      ? (timeTaken > mastery || timer <= 0)
-      : false; // GK — no slow penalty
+    const late        = mastery !== null ? (timeTaken > mastery || timer <= 0) : false;
 
     setSelected(opt);
     setAnswered(true);
     setIsLate(late);
 
-    // Record answer with full params
-    recordAnswer(
-      subject,
-      q.topic,
-      level,
-      diff,
-      category,
-      correct,
-      late,
-      q.id
-    );
-
+    recordAnswer(subject, q.topic, level, diff, category, correct, late, q.id);
     setQCount(c => c + 1);
 
-    showToast(
-      correct
-        ? OK_MSGS[Math.floor(Math.random() * OK_MSGS.length)]
-        : WRONG_MSGS[Math.floor(Math.random() * WRONG_MSGS.length)]
+    showToast(correct
+      ? OK_MSGS[Math.floor(Math.random() * OK_MSGS.length)]
+      : WRONG_MSGS[Math.floor(Math.random() * WRONG_MSGS.length)]
     );
 
-    // Check for topic level unlock
-    const unlock = checkTopicLevelUnlock(
-      useStore.getState().topicRecords,
-      subject,
-      q.topic,
-      category
-    );
-    if (unlock.unlocked) {
-      setTimeout(() => showLevelUpToast(unlock.message), 800);
-    }
+    const unlock = checkTopicLevelUnlock(useStore.getState().topicRecords, subject, q.topic, category);
+    if (unlock.unlocked) setTimeout(() => showLevelUpToast(unlock.message), 800);
   }
-
-  function handleNext() { loadNext(); }
 
   function handlePracticeLater() {
     clearInterval(timerRef.current);
-    const level = current?.question?.question_level ||
-                  current?.question?.level ||
-                  current?.question?.grade || '6';
+    const level = current?.question?.question_level || current?.question?.level || current?.question?.grade || '6';
     onEnd({ subject, questionsAnswered: qCount, subj, level });
   }
 
@@ -397,15 +547,14 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     </div>
   );
 
-  const q   = current.question;
-  const pct = Math.max(0, Math.round((timer / timerMax) * 100));
-  const diffLabel = q.difficulty
-    ? q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1)
-    : 'Easy';
+  const q        = current.question;
+  const pct      = Math.max(0, Math.round((timer / timerMax) * 100));
+  const diffLabel = q.difficulty ? q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1) : 'Easy';
+  const ans       = q.ans || q.answer;
+  const opts      = q.opts || [q.option_a, q.option_b, q.option_c, q.option_d];
 
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      {/* Top bar */}
       <div style={{ background:subj?.color || '#4338ca', padding:'14px 16px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
           <button className="back-btn" onClick={handlePracticeLater}>Practice Later</button>
@@ -414,7 +563,6 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
           </div>
           <span style={{ fontSize:18 }}>{subj?.icon}</span>
         </div>
-        {/* Timer bar */}
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
           <div style={{ flex:1, background:'rgba(255,255,255,0.25)', borderRadius:99, height:6, overflow:'hidden' }}>
             <div style={{ background:'#fff', borderRadius:99, height:6, width:`${pct}%`, transition:'width 1s linear', animation:timer===0?'pulse 1s ease-in-out infinite':'none' }}/>
@@ -428,18 +576,15 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
         )}
       </div>
 
-      {/* Body */}
       <div style={{ flex:1, overflowY:'auto', padding:'16px 14px 100px' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:13 }}>
           <span style={{ fontSize:11, color:'#9ca3af', fontWeight:600 }}>{tl(q.topic || '')}</span>
-          <span style={{ fontSize:11, fontWeight:700, background:subj?.light, color:subj?.color, borderRadius:99, padding:'3px 11px' }}>
-            {diffLabel}
-          </span>
+          <span style={{ fontSize:11, fontWeight:700, background:subj?.light, color:subj?.color, borderRadius:99, padding:'3px 11px' }}>{diffLabel}</span>
         </div>
         <div className="q-card">{q.q || q.question}</div>
         <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:14 }}>
-          {(q.opts || [q.option_a, q.option_b, q.option_c, q.option_d]).map((opt, i) => {
-            const isCorrect = opt === q.ans || opt === q.answer;
+          {opts.map((opt, i) => {
+            const isCorrect = opt === ans;
             const isSel     = opt === selected;
             let bg='#fff', border='1.5px solid #e5e7eb', color='#111', bBg='#f3f4f6', bColor='#6b7280';
             if (answered) {
@@ -460,24 +605,16 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
 
         {answered && (
           <>
-            <div style={{ borderRadius:13, padding:14, background:selected===(q.ans||q.answer)?'#dcfce7':'#fee2e2', display:'flex', gap:9, alignItems:'flex-start', marginBottom:12 }}>
-              <span style={{ fontSize:18 }}>{selected===(q.ans||q.answer)?'🎉':'💡'}</span>
+            <div style={{ borderRadius:13, padding:14, background:selected===ans?'#dcfce7':'#fee2e2', display:'flex', gap:9, alignItems:'flex-start', marginBottom:12 }}>
+              <span style={{ fontSize:18 }}>{selected===ans?'🎉':'💡'}</span>
               <div>
-                <div style={{ fontWeight:700, fontSize:14, color:selected===(q.ans||q.answer)?'#15803d':'#dc2626' }}>
-                  {selected===(q.ans||q.answer)
-                    ? (isLate ? 'Correct! (Take your time next time ⏱)' : 'Correct!')
-                    : `Answer: ${q.ans || q.answer}`}
+                <div style={{ fontWeight:700, fontSize:14, color:selected===ans?'#15803d':'#dc2626' }}>
+                  {selected===ans ? (isLate ? 'Correct! (Take your time next time ⏱)' : 'Correct!') : `Answer: ${ans}`}
                 </div>
-                {(q.exp || q.explanation) &&
-                  <div style={{ fontSize:12, color:'#4b5563', marginTop:3, lineHeight:1.5 }}>
-                    {q.exp || q.explanation}
-                  </div>
-                }
+                {(q.exp || q.explanation) && <div style={{ fontSize:12, color:'#4b5563', marginTop:3, lineHeight:1.5 }}>{q.exp || q.explanation}</div>}
               </div>
             </div>
-            <button className="primary-btn" style={{ background:subj?.color }} onClick={handleNext}>
-              Next Question →
-            </button>
+            <button className="primary-btn" style={{ background:subj?.color }} onClick={loadNext}>Next Question →</button>
           </>
         )}
       </div>
@@ -558,108 +695,6 @@ function StudentReport({ setScreen, goHome }) {
           <div style={{ fontFamily:"'Syne',system-ui", fontSize:15, fontWeight:700, color:'#111', marginBottom:6 }}>Keep Going!</div>
           <div style={{ fontSize:13, color:'#6b7280', lineHeight:1.5 }}>Every question makes you smarter. The more you practise, the better we understand your strengths!</div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── SIGNUP ────────────────────────────────────────────────────────────────
-function SignupScreen({ setScreen, goHome }) {
-  const [name,   setName]   = useState('');
-  const [email,  setEmail]  = useState('');
-  const [mobile, setMobile] = useState('');
-  const [grade,  setGrade]  = useState('');
-  const [pass,   setPass]   = useState('');
-  const [pass2,  setPass2]  = useState('');
-  const [err,    setErr]    = useState('');
-
-  const GRADES = ['Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Other'];
-
-  function handleSave(e) {
-    e.preventDefault();
-    if (!name.trim())         { setErr('Please enter your name.'); return; }
-    if (!email.includes('@')) { setErr('Please enter a valid email.'); return; }
-    if (!mobile.trim())       { setErr('Please enter your mobile number.'); return; }
-    if (!grade)               { setErr('Please select your grade.'); return; }
-    if (pass.length < 6)      { setErr('Password must be at least 6 characters.'); return; }
-    if (pass !== pass2)       { setErr('Passwords do not match.'); return; }
-    const pin = genPin();
-    useStore.getState().login({
-      id:               Date.now() + '',
-      name:             name.trim(),
-      email:            email.trim().toLowerCase(),
-      mobile:           mobile.trim(),
-      grade,
-      parentPin:        pin,
-      parentPinChanged: false,
-      streak:           0,
-      lastPracticeDate: null,
-    });
-    setScreen('signup_done');
-  }
-
-  return (
-    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
-        <div style={{ textAlign:'left', marginBottom:8 }}>
-          <button className="back-btn" onClick={goHome}>← Back</button>
-        </div>
-        <div style={{ fontSize:48, marginBottom:8 }}>🚀</div>
-        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Join Leap IQ</div>
-        <div style={{ color:'rgba(255,255,255,0.75)', fontSize:14 }}>Free to start · Track your progress</div>
-      </div>
-      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18, overflowY:'auto' }}>
-        <form onSubmit={handleSave} style={{ display:'flex', flexDirection:'column' }}>
-          <label className="lbl">Your Name</label>
-          <input className="field" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Arjun Sharma" />
-          <label className="lbl">Email Address</label>
-          <input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" />
-          <label className="lbl">Mobile Number</label>
-          <input className="field" type="tel" value={mobile} onChange={e=>setMobile(e.target.value)} placeholder="+91 98765 43210" />
-          <label className="lbl">Your Grade</label>
-          <select className="field" value={grade} onChange={e=>setGrade(e.target.value)}>
-            <option value="">Select grade...</option>
-            {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-          <label className="lbl">Password</label>
-          <input className="field" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="At least 6 characters" />
-          <label className="lbl">Confirm Password</label>
-          <input className="field" type="password" value={pass2} onChange={e=>setPass2(e.target.value)} placeholder="Retype password" />
-          {err && <div className="error-box">{err}</div>}
-          <button type="submit" className="primary-btn">Create Account →</button>
-        </form>
-        <button className="secondary-btn" onClick={goHome}>Skip for now</button>
-        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>Your data is private and never shared.</p>
-      </div>
-    </div>
-  );
-}
-
-// ─── SIGNUP DONE ────────────────────────────────────────────────────────────
-function SignupDone({ setScreen, goHome }) {
-  const { user } = useStore();
-  const pin = user?.parentPin || '------';
-  return (
-    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:'linear-gradient(135deg,#059669,#0D9488)', padding:'32px 20px 48px', textAlign:'center' }}>
-        <div style={{ fontSize:56, marginBottom:8 }}>🎉</div>
-        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Welcome, {user?.name?.split(' ')[0]}!</div>
-        <div style={{ color:'rgba(255,255,255,0.85)', fontSize:14 }}>Your account is ready. Here's something important:</div>
-      </div>
-      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18 }}>
-        <div style={{ background:'#f0fdf4', border:'2px solid #86efac', borderRadius:16, padding:20, textAlign:'center', marginBottom:20 }}>
-          <div style={{ fontSize:13, fontWeight:700, color:'#15803d', marginBottom:4 }}>🔑 Parent Access PIN</div>
-          <div style={{ fontFamily:"'Syne',system-ui", fontSize:36, fontWeight:800, color:'#166534', letterSpacing:6, margin:'12px 0' }}>{pin}</div>
-          <div style={{ fontSize:12, color:'#166534', lineHeight:1.6 }}>Share this with your parent or teacher so they can view your full progress report.</div>
-          <div style={{ fontSize:11, color:'#15803d', marginTop:10, fontWeight:600, background:'#dcfce7', borderRadius:8, padding:'8px 12px' }}>
-            ⚠ Your parent will set a private PIN on their first login.
-          </div>
-        </div>
-        <button style={{ width:'100%', padding:12, border:'1.5px solid #86efac', borderRadius:12, background:'#f0fdf4', color:'#15803d', fontFamily:'inherit', fontWeight:700, fontSize:14, cursor:'pointer', marginBottom:14 }}
-          onClick={() => { navigator.clipboard.writeText(pin).then(()=>showToast('PIN copied! 📋','#059669')).catch(()=>showToast(pin,'#059669')); }}>
-          📋 Copy PIN
-        </button>
-        <button className="primary-btn" onClick={goHome}>Let's Start Learning! 🚀</button>
       </div>
     </div>
   );
@@ -820,7 +855,7 @@ function ParentDashboard({ setScreen, goHome }) {
                               {t.score===null?'—':`${t.score}%`}
                             </span>
                             <span style={{ fontSize:10, background:t.needsWork?'#fee2e2':subj.light, color:t.needsWork?'#dc2626':subj.color, borderRadius:99, padding:'2px 7px', fontWeight:700, minWidth:44, textAlign:'center' }}>
-                              {t.mastered ? '⭐ Done' : t.needsWork ? '⚠ Weak' : ['Easy','Medium','Hard'][t.diffLevel]}
+                              {t.mastered?'⭐ Done':t.needsWork?'⚠ Weak':['Easy','Med','Hard'][t.diffLevel]}
                             </span>
                           </div>
                         ))}
