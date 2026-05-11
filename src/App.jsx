@@ -577,11 +577,15 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     </div>
   );
 
-  const q        = current.question;
-  const pct      = Math.max(0, Math.round((timer / timerMax) * 100));
-  const diffLabel = q.difficulty ? q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1) : 'Easy';
-  const ans       = q.ans || q.answer;
-  const opts      = q.opts || [q.option_a, q.option_b, q.option_c, q.option_d];
+    const q        = current.question;
+    const pct      = Math.max(0, Math.round((timer / timerMax) * 100));
+    const diffLabel = q.difficulty ? q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1) : 'Easy';
+    const opts      = q.opts || [q.option_a, q.option_b, q.option_c, q.option_d];
+    const rawAnswer = q.ans || q.answer || '';
+    // Convert letter answer (A/B/C/D) to actual option text
+    const ans = rawAnswer.length === 1 && 'ABCD'.includes(rawAnswer.toUpperCase())
+      ? opts['ABCD'.indexOf(rawAnswer.toUpperCase())]
+      : rawAnswer;
 
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
