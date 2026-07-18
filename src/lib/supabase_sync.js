@@ -12,17 +12,19 @@ import { supabase } from './supabase';
 
 export async function registerStudent(userData) {
   try {
-    const { data, error } = await supabase
-      .from('students')
-      .insert({
-        name:       userData.name,
-        email:      userData.email,
-        mobile:     userData.mobile,
-        grade:      userData.grade,
-        password:   userData.password,
-        parent_pin: userData.parentPin,
-        is_active:  true,
-      })
+const { data, error } = await supabase
+  .from('students')
+  .insert({
+    full_name:     userData.name,
+    email:         userData.email,
+    mobile:        userData.mobile,
+    grade:         userData.grade,
+    country:       'India',
+    password_hash: userData.password,
+    pin:           userData.parentPin,
+    is_active:     true,
+    is_verified:   false,
+  })
       .select()
       .single();
 
