@@ -6,6 +6,7 @@ import {
   getTimers, DIFF_LABEL
 } from './lib/engine';
 import { QB } from './lib/questions';
+import { AuthPrompt, SignupScreen, SigninScreen, ForgotPasswordScreen, ForgotPINScreen } from './lib/auth_screens';
 
 const fmt = s => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
 const tl  = t => t.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
@@ -122,10 +123,12 @@ export default function App() {
       {screen === 'practice'     && <PracticeScreen   setScreen={setScreen} subject={activeSubject} subj={subj} onEnd={onSessionEnd} onLoginRequired={() => setScreen('auth_prompt')} />}
       {screen === 'session_end'  && <SessionEndScreen setScreen={setScreen} result={sessionResult} subj={subj} startSubject={startSubject} goHome={goHome} />}
       {screen === 'report'       && <StudentReport    setScreen={setScreen} goHome={goHome} />}
-      {screen === 'signin'       && <SigninScreen     setScreen={setScreen} goHome={goHome} />}
-      {screen === 'signup'       && <SignupScreen     setScreen={setScreen} goHome={goHome} />}
-      {screen === 'signup_done'  && <SignupDone       setScreen={setScreen} goHome={goHome} />}
-      {screen === 'auth_prompt'  && <AuthPrompt       setScreen={setScreen} goHome={goHome} />}
+      {screen === 'signin'          && <SigninScreen         setScreen={setScreen} goHome={goHome} />}
+      {screen === 'signup'          && <SignupScreen         setScreen={setScreen} goHome={goHome} />}
+      {screen === 'signup_done'     && <SignupDone           setScreen={setScreen} goHome={goHome} />}
+      {screen === 'auth_prompt'     && <AuthPrompt           setScreen={setScreen} goHome={goHome} />}
+      {screen === 'forgot_password' && <ForgotPasswordScreen setScreen={setScreen} goHome={goHome} />}
+      {screen === 'forgot_pin'      && <ForgotPINScreen      setScreen={setScreen} goHome={goHome} />}
       {screen === 'parent_login' && <ParentLogin      setScreen={setScreen} goHome={goHome} />}
       {screen === 'parent_pin'   && <ParentChangePin  setScreen={setScreen} goHome={goHome} />}
       {screen === 'parent_dash'  && <ParentDashboard  setScreen={setScreen} goHome={goHome} />}
@@ -242,158 +245,6 @@ function HomeScreen({ setScreen, startSubject }) {
           </div>
         )}
         <div style={{ height:20 }}/>
-      </div>
-    </div>
-  );
-}
-
-// ─── AUTH PROMPT ───────────────────────────────────────────────────────────
-function AuthPrompt({ setScreen, goHome }) {
-  return (
-    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
-        <div style={{ fontSize:56, marginBottom:8 }}>🚀</div>
-        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>You're on a roll!</div>
-        <div style={{ color:'rgba(255,255,255,0.85)', fontSize:14, lineHeight:1.6 }}>Sign in or create a free account to keep practising and save your progress.</div>
-      </div>
-      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18 }}>
-        <div style={{ background:'#f0effe', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:'#4338ca', marginBottom:4 }}>Already have an account?</div>
-          <div style={{ fontSize:12, color:'#6b7280', marginBottom:14 }}>Sign in to continue where you left off.</div>
-          <button className="primary-btn" onClick={() => setScreen('signin')}>Sign In →</button>
-        </div>
-        <div style={{ background:'#f0fdf4', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:4 }}>New to Leap IQ?</div>
-          <div style={{ fontSize:12, color:'#6b7280', marginBottom:14 }}>Create a free account — takes 30 seconds.</div>
-          <button style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#166534', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}
-            onClick={() => setScreen('signup')}>Create Free Account →</button>
-        </div>
-        <button className="secondary-btn" onClick={goHome}>Maybe later — go home</button>
-        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>
-          Free forever · No credit card needed · Your data stays private
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ─── SIGN IN ───────────────────────────────────────────────────────────────
-function SigninScreen({ setScreen, goHome }) {
-  const { user } = useStore();
-  const [email, setEmail] = useState('');
-  const [pass,  setPass]  = useState('');
-  const [err,   setErr]   = useState('');
-
-  function handleSignin(e) {
-    e.preventDefault();
-    setErr('');
-    if (!email.trim()) { setErr('Please enter your email.'); return; }
-    if (!pass.trim())  { setErr('Please enter your password.'); return; }
-    if (!user) { setErr('No account found on this device. Please register first.'); return; }
-    if (user.email.toLowerCase() !== email.trim().toLowerCase()) { setErr('Email not found. Please check or register.'); return; }
-    if (user.password !== pass) { setErr('Incorrect password. Please try again.'); return; }
-    useStore.getState().login(user);
-    showToast(`Welcome back, ${user.name?.split(' ')[0]}! 👋`, '#4338ca');
-    goHome();
-  }
-
-  return (
-    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
-        <div style={{ textAlign:'left', marginBottom:8 }}>
-          <button className="back-btn" onClick={goHome}>← Back</button>
-        </div>
-        <div style={{ fontSize:48, marginBottom:8 }}>👋</div>
-        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Welcome back!</div>
-        <div style={{ color:'rgba(255,255,255,0.75)', fontSize:14 }}>Sign in to continue your learning journey</div>
-      </div>
-      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18, overflowY:'auto' }}>
-        <form onSubmit={handleSignin} style={{ display:'flex', flexDirection:'column' }}>
-          <label className="lbl">Email Address</label>
-          <input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" />
-          <label className="lbl">Password</label>
-          <input className="field" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Your password" />
-          {err && <div className="error-box">{err}</div>}
-          <button type="submit" className="primary-btn">Sign In →</button>
-        </form>
-        <div style={{ textAlign:'center', marginTop:20 }}>
-          <div style={{ fontSize:13, color:'#6b7280', marginBottom:10 }}>Don't have an account yet?</div>
-          <button className="secondary-btn" onClick={() => setScreen('signup')}>Create Free Account →</button>
-        </div>
-        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>Your data is private and never shared.</p>
-      </div>
-    </div>
-  );
-}
-
-// ─── SIGN UP ───────────────────────────────────────────────────────────────
-function SignupScreen({ setScreen, goHome }) {
-  const [name,   setName]   = useState('');
-  const [email,  setEmail]  = useState('');
-  const [mobile, setMobile] = useState('');
-  const [grade,  setGrade]  = useState('');
-  const [pass,   setPass]   = useState('');
-  const [pass2,  setPass2]  = useState('');
-  const [err,    setErr]    = useState('');
-
-  const GRADES = ['Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Other'];
-
-  async function handleSave(e) {
-    e.preventDefault();
-    if (!name.trim())         { setErr('Please enter your name.'); return; }
-    if (!email.includes('@')) { setErr('Please enter a valid email.'); return; }
-    if (!mobile.trim())       { setErr('Please enter your mobile number.'); return; }
-    if (!grade)               { setErr('Please select your grade.'); return; }
-    if (pass.length < 6)      { setErr('Password must be at least 6 characters.'); return; }
-    if (pass !== pass2)       { setErr('Passwords do not match.'); return; }
-    setErr('');
-    try {
-      await useStore.getState().register({
-        name: name.trim(), email: email.trim().toLowerCase(),
-        mobile: mobile.trim(), grade, password: pass,
-      });
-      setScreen('signup_done');
-    } catch (err) {
-      setErr('Something went wrong. Please try again.');
-    }
-  }
-
-  return (
-    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
-        <div style={{ textAlign:'left', marginBottom:8 }}>
-          <button className="back-btn" onClick={goHome}>← Back</button>
-        </div>
-        <div style={{ fontSize:48, marginBottom:8 }}>🚀</div>
-        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Join Leap IQ</div>
-        <div style={{ color:'rgba(255,255,255,0.75)', fontSize:14 }}>Free to start · Track your progress</div>
-      </div>
-      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18, overflowY:'auto' }}>
-        <form onSubmit={handleSave} style={{ display:'flex', flexDirection:'column' }}>
-          <label className="lbl">Your Name</label>
-          <input className="field" value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Arjun Sharma" />
-          <label className="lbl">Email Address</label>
-          <input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" />
-          <label className="lbl">Mobile Number</label>
-          <input className="field" type="tel" value={mobile} onChange={e=>setMobile(e.target.value)} placeholder="+91 98765 43210" />
-          <label className="lbl">Your Grade</label>
-          <select className="field" value={grade} onChange={e=>setGrade(e.target.value)}>
-            <option value="">Select grade...</option>
-            {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-          <label className="lbl">Password</label>
-          <input className="field" type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="At least 6 characters" />
-          <label className="lbl">Confirm Password</label>
-          <input className="field" type="password" value={pass2} onChange={e=>setPass2(e.target.value)} placeholder="Retype password" />
-          {err && <div className="error-box">{err}</div>}
-          <button type="submit" className="primary-btn">Create Account →</button>
-        </form>
-        <div style={{ textAlign:'center', marginTop:16 }}>
-          <div style={{ fontSize:13, color:'#6b7280', marginBottom:8 }}>Already have an account?</div>
-          <button className="secondary-btn" onClick={() => setScreen('signin')}>Sign In →</button>
-        </div>
-        <button className="secondary-btn" style={{ marginTop:8 }} onClick={goHome}>Skip for now</button>
-        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>Your data is private and never shared.</p>
       </div>
     </div>
   );
@@ -671,51 +522,6 @@ function StudentReport({ setScreen, goHome }) {
           <div style={{ fontFamily:"'Syne',system-ui", fontSize:15, fontWeight:700, color:'#111', marginBottom:6 }}>Keep Going!</div>
           <div style={{ fontSize:13, color:'#6b7280', lineHeight:1.5 }}>Every question makes you smarter. The more you practise, the better we understand your strengths!</div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── PARENT LOGIN ───────────────────────────────────────────────────────────
-function ParentLogin({ setScreen, goHome }) {
-  const { user } = useStore();
-  const [email, setEmail] = useState('');
-  const [pin,   setPin]   = useState('');
-  const [err,   setErr]   = useState('');
-
-  function handleLogin(e) {
-    e.preventDefault();
-    setErr('');
-    if (!email.trim())  { setErr("Please enter the student's email."); return; }
-    if (pin.length < 6) { setErr('Please enter the full 6-digit PIN.'); return; }
-    if (!user || user.email.toLowerCase() !== email.trim().toLowerCase())
-      { setErr('No student found with this email.'); return; }
-    if (pin !== user.parentPin) { setErr('Incorrect PIN. Please try again.'); return; }
-    if (!user.parentPinChanged) { setScreen('parent_pin'); }
-    else { setScreen('parent_dash'); }
-  }
-
-  return (
-    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#312e81)', padding:'28px 20px 44px', textAlign:'center' }}>
-        <div style={{ textAlign:'left' }}><button className="back-btn" onClick={goHome}>← Back</button></div>
-        <div style={{ fontSize:44, marginBottom:8 }}>🔐</div>
-        <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff', marginBottom:6 }}>Parent / Teacher Login</div>
-        <div style={{ color:'rgba(255,255,255,0.75)', fontSize:13, lineHeight:1.6 }}>Enter the student's email and their 6-digit Parent Access PIN</div>
-      </div>
-      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18 }}>
-        <form onSubmit={handleLogin} style={{ display:'flex', flexDirection:'column' }}>
-          <label className="lbl">Student's Email Address</label>
-          <input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="student@email.com" />
-          <label className="lbl">6-Digit Parent Access PIN</label>
-          <div style={{ fontSize:11, color:'#9ca3af', marginBottom:4 }}>The student received this PIN when they registered</div>
-          <input className="field" type="tel" maxLength={6} value={pin}
-            onChange={e=>setPin(e.target.value.replace(/\D/,'').slice(0,6))}
-            placeholder="••••••" style={{ letterSpacing:8, fontSize:22, textAlign:'center' }}/>
-          {err && <div className="error-box">{err}</div>}
-          <button type="submit" className="primary-btn">Access Dashboard →</button>
-        </form>
-        <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:20, lineHeight:1.6 }}>On your first login you'll set a private PIN the student won't know.</p>
       </div>
     </div>
   );
