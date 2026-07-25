@@ -12,19 +12,20 @@ import { supabase } from './supabase';
 
 export async function registerStudent(userData) {
   try {
-const { data, error } = await supabase
-  .from('students')
-  .insert({
-    full_name:     userData.name,
-    email:         userData.email,
-    mobile:        userData.mobile,
-    grade:         userData.grade,
-    country:       'India',
-    password_hash: userData.password,
-    pin:           userData.parentPin,
-    is_active:     true,
-    is_verified:   false,
-  })
+    const { data, error } = await supabase
+      .from('students')
+      .insert({
+        full_name:     userData.name,
+        email:         userData.email,
+        grade:         userData.grade,
+        city:          userData.city     || null,
+        country:       'India',
+        password_hash: userData.password,
+        pin:           userData.parentPin,
+        registered_by: 'self',
+        is_active:     true,
+        is_verified:   false,
+      })
       .select()
       .single();
 
@@ -194,5 +195,47 @@ export async function fetchAllQuestions() {
   } catch (err) {
     console.error('Fetch all exception:', err);
     return null;
+  }
+}
+
+// ── 5. FETCH CITIES ─────────────────────────────────────────────────────────
+// Returns unique list of cities from schools table — dynamic, no hardcoding
+
+export async function fetchCities() {
+  try {
+    const { data, error } = await supabase
+      .from('schools')
+      .select('city')
+      .eq('is_active', true)
+      .order('city');
+
+    if (error) { console.error('fetchCities error:', error); return []; }
+
+    // Deduplicate cities
+    const unique = [...new Set(data.map(r => r.city).filter(Boolean))];
+    return unique;
+  } catch (err) {
+    console.error('fetchCities exception:', err);
+    return [];
+  }
+}
+
+// ── 6. FETCH SCHOOLS BY CITY ────────────────────────────────────────────────
+// Returns schools for a given city — used in registration dropdown
+
+export async function fetchSchools(city) {
+  try {
+    const { data, error } = await supabase
+      .from('schools')
+      .select('id, name, city')
+      .eq('is_active', true)
+      .eq('city', city)
+      .order('name');
+
+    if (error) { console.error('fetchSchools error:', error); return []; }
+    return data || [];
+  } catch (err) {
+    console.error('fetchSchools exception:', err);
+    return [];
   }
 }
