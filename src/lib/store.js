@@ -56,14 +56,16 @@ export const useStore = create(
           id:               Date.now() + '',
           name:             userData.name,
           email:            userData.email.trim().toLowerCase(),
-          mobile:           userData.mobile,
           grade:            userData.grade,
+          city:             userData.city || '',
           password:         userData.password,
           parentPin:        pin,
           parentPinChanged: false,
           streak:           0,
           lastPracticeDate: null,
           supabaseId:       null,
+          schoolId:         userData.schoolId || null,
+          shareData:        userData.shareData || false,
         };
 
         // Save to Supabase (non-blocking — don't fail if offline)
