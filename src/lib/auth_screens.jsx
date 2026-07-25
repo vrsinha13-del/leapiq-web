@@ -13,8 +13,8 @@
 // ──────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect } from 'react';
-import { useStore } from './lib/store';
-import { fetchSchools, fetchCities } from './lib/supabase_sync';
+import { useStore } from './store';
+import { fetchSchools, fetchCities } from './supabase_sync';
 
 // ─── AUTH PROMPT ───────────────────────────────────────────────────────────
 // Shown after 10 questions (skippable) or 20 questions (mandatory)
