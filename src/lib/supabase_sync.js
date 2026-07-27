@@ -272,3 +272,23 @@ export async function linkStudentToSchool(studentId, schoolId, addedBy = 'self')
     return { success: false, error: err.message };
   }
 }
+
+// ── 8. FETCH STUDENT BY EMAIL ──────────────────────────────────────────────
+// Used for sign in — fetches student from Supabase by email
+
+export async function fetchStudentByEmail(email) {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .eq('is_active', true)
+      .single();
+
+    if (error) { console.error('fetchStudentByEmail error:', error); return null; }
+    return data;
+  } catch (err) {
+    console.error('fetchStudentByEmail exception:', err);
+    return null;
+  }
+}
