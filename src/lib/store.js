@@ -7,7 +7,7 @@ import {
   guestLimitReachedForSubject,
   calculateStreak,
 } from './engine';
-import { registerStudent, saveSession } from './supabase_sync';
+import { registerStudent, saveSession, linkStudentToSchool } from './supabase_sync';
 
 export const SUBJECTS = [
   { id:'maths',     label:'Mathematics',       short:'Maths',     icon:'∑',  color:'#4F46E5', light:'#EEF2FF' },
@@ -72,6 +72,11 @@ export const useStore = create(
         const result = await registerStudent(newUser);
         if (result.success && result.student?.id) {
           newUser.supabaseId = result.student.id;
+
+          // If student chose to share with school — create school_students link
+          if (userData.schoolId && userData.shareData) {
+            await linkStudentToSchool(result.student.id, userData.schoolId, 'self');
+          }
         }
 
         // Always save locally
