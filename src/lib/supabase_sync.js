@@ -58,17 +58,24 @@ export async function saveSession({
   if (!studentId) return { success: false, error: 'No student ID' };
 
   try {
+    const total    = questionsAnswered || 0;
+    const cor      = correct  || 0;
+    const wrg      = wrong    || 0;
+    const scorePct = total > 0 ? Math.round((cor / total) * 100) : 0;
+
     const { error } = await supabase
       .from('session_logs')
       .insert({
-        student_id:          studentId,
+        student_id:       studentId,
         subject,
-        questions_answered:  questionsAnswered,
-        correct_answers:     correct   || 0,
-        wrong_answers:       wrong     || 0,
-        duration_seconds:    durationSeconds || 0,
-        level:               level     || '6',
-        session_date:        new Date().toISOString(),
+        question_level:   level || '6',
+        total_attempted:  total,
+        total_correct:    cor,
+        total_wrong:      wrg,
+        score_pct:        scorePct,
+        duration_seconds: durationSeconds || 0,
+        started_at:       new Date(Date.now() - (durationSeconds||0)*1000).toISOString(),
+        ended_at:         new Date().toISOString(),
       });
 
     if (error) {
@@ -237,5 +244,31 @@ export async function fetchSchools(city) {
   } catch (err) {
     console.error('fetchSchools exception:', err);
     return [];
+  }
+}
+
+// ── 7. LINK STUDENT TO SCHOOL ───────────────────────────────────────────────
+// Creates a school_students row when student opts to share with school
+// Status = pending_approval — school admin must accept
+
+export async function linkStudentToSchool(studentId, schoolId, addedBy = 'self') {
+  try {
+    const { error } = await supabase
+      .from('school_students')
+      .insert({
+        student_id: studentId,
+        school_id:  schoolId,
+        status:     'pending_approval',
+        added_by:   addedBy,
+      });
+
+    if (error) {
+      console.error('linkStudentToSchool error:', error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('linkStudentToSchool exception:', err);
+    return { success: false, error: err.message };
   }
 }
