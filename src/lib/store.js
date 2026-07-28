@@ -117,8 +117,8 @@ export const useStore = create(
         const key   = `${subject}_${level}_${topic}`;
         const today = new Date().toDateString();
 
-        // Debug log — remove after fixing
-        console.log('recordAnswer:', { subject, topic, difficulty, isCorrect, activeSession: s.activeSession?.easyAttempted });
+        // Debug log - remove after fixing
+        console.log('recordAnswer:', { subject, topic, difficulty, isCorrect, easyAttempted: s.activeSession?.easyAttempted });
 
         const updated = updateRecord(
           s.topicRecords[key] || emptyTopicRecord(),
