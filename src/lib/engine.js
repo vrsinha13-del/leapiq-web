@@ -1,7 +1,8 @@
-// ─── SUBJECT CONFIGURATION ─────────────────────────────────────────────────
-// All subject-specific constants in one place
-// Timer = shown to student · MasteryTime = internal slow threshold
+// src/lib/engine.js
+// Leap IQ — Complete Adaptive Engine
+// All 4 subjects: Maths, Reasoning, English, GK
 
+// ─── SUBJECT CONFIGURATION ─────────────────────────────────────────────────
 export const SUBJECT_CONFIG = {
 
   maths: {
@@ -13,6 +14,10 @@ export const SUBJECT_CONFIG = {
       medium: { minQ: 60,  minAcc: 85, minDays: 7 },
       hard:   { minQ: 30,  minAcc: 80, minDays: 7 },
     },
+    // Promotion thresholds — TOTAL correct at this difficulty
+    promote: { easy: 5, medium: 3 },
+    // Demotion — wrong answers in a row
+    demote:  { unmastered: 2, mastered: 1 },
   },
 
   reasoning: {
@@ -24,21 +29,22 @@ export const SUBJECT_CONFIG = {
       medium: { minQ: 60,  minAcc: 85, minDays: 7 },
       hard:   { minQ: 30,  minAcc: 80, minDays: 7 },
     },
+    promote: { easy: 5, medium: 3 },
+    demote:  { unmastered: 2, mastered: 1 },
   },
 
   english: {
-    // Timer varies by category
     timers: {
-      grammar:         { easy: 60,  medium: 120, hard: 240 },
-      vocabulary:      { easy: 60,  medium: 120, hard: 240 },
-      comprehension:   { easy: 120, medium: 180, hard: 300 },
-      verbal_reasoning:{ easy: 90,  medium: 150, hard: 300 },
+      grammar:          { easy: 60,  medium: 120, hard: 240 },
+      vocabulary:       { easy: 60,  medium: 120, hard: 240 },
+      comprehension:    { easy: 120, medium: 180, hard: 300 },
+      verbal_reasoning: { easy: 90,  medium: 150, hard: 300 },
     },
     masteryTime: {
-      grammar:         { easy: 45,  medium: 90,  hard: 180 },
-      vocabulary:      { easy: 45,  medium: 90,  hard: 180 },
-      comprehension:   { easy: 90,  medium: 135, hard: 225 },
-      verbal_reasoning:{ easy: 60,  medium: 110, hard: 210 },
+      grammar:          { easy: 45,  medium: 90,  hard: 180 },
+      vocabulary:       { easy: 45,  medium: 90,  hard: 180 },
+      comprehension:    { easy: 90,  medium: 135, hard: 225 },
+      verbal_reasoning: { easy: 60,  medium: 110, hard: 210 },
     },
     speedPenalty: true,
     mastery: {
@@ -53,52 +59,49 @@ export const SUBJECT_CONFIG = {
         hard:   { minQ: 30,  minAcc: 75, minDays: 7 },
       },
     },
+    promote: { easy: 5, medium: 3 },
+    demote:  { unmastered: 2, mastered: 1 },
   },
 
   gk: {
     timers:       { easy: 30, medium: 45, hard: 60 },
-    masteryTime:  null,        // no speed penalty for GK
+    masteryTime:  null,
     speedPenalty: false,
     mastery: {
       easy:   { minQ: 80,  minAcc: 85, minDays: 5 },
       medium: { minQ: 50,  minAcc: 80, minDays: 5 },
       hard:   { minQ: 25,  minAcc: 75, minDays: 5 },
     },
+    promote: { easy: 5, medium: 3 },
+    demote:  { unmastered: 2, mastered: 1 },
   },
 };
 
-// ─── DIFF LABELS ────────────────────────────────────────────────────────────
 export const DIFF_LABEL = ['Easy', 'Medium', 'Hard'];
 
-// ─── GET TIMER FOR QUESTION ─────────────────────────────────────────────────
-// Returns { shown, mastery } for a given subject + category + difficulty
-
+// ─── GET TIMER ──────────────────────────────────────────────────────────────
 export function getTimers(subject, category, difficulty) {
-  const cfg = SUBJECT_CONFIG[subject];
+  const cfg  = SUBJECT_CONFIG[subject];
   if (!cfg) return { shown: 60, mastery: 45 };
-
   const diff = difficulty?.toLowerCase() || 'easy';
 
   if (subject === 'english') {
-    const cat      = category?.toLowerCase().replace(/\s+/g, '_') || 'grammar';
-    const shown    = cfg.timers[cat]?.[diff]    ?? cfg.timers.grammar[diff];
-    const mastery  = cfg.masteryTime[cat]?.[diff] ?? cfg.masteryTime.grammar[diff];
+    const cat     = category?.toLowerCase().replace(/\s+/g, '_') || 'grammar';
+    const shown   = cfg.timers[cat]?.[diff]      ?? cfg.timers.grammar[diff];
+    const mastery = cfg.masteryTime[cat]?.[diff]  ?? cfg.masteryTime.grammar[diff];
     return { shown, mastery };
   }
 
   return {
-    shown:   cfg.timers[diff]      ?? 60,
+    shown:   cfg.timers[diff]        ?? 60,
     mastery: cfg.masteryTime?.[diff] ?? null,
   };
 }
 
 // ─── GET MASTERY CRITERIA ───────────────────────────────────────────────────
-// Returns { minQ, minAcc, minDays } for a subject + category + difficulty
-
 export function getMasteryCriteria(subject, category, difficulty) {
   const cfg  = SUBJECT_CONFIG[subject];
   if (!cfg) return { minQ: 100, minAcc: 90, minDays: 7 };
-
   const diff = difficulty?.toLowerCase() || 'easy';
 
   if (subject === 'english') {
@@ -113,33 +116,27 @@ export function getMasteryCriteria(subject, category, difficulty) {
 }
 
 // ─── EMPTY TOPIC RECORD ─────────────────────────────────────────────────────
-// One record per subject_level_topic combination
-
 export function emptyTopicRecord() {
   return {
     answered:      0,
     correct:       0,
     slow:          0,
-    streak:        0,
     lastWrong:     0,
     diffLevel:     0,   // 0=Easy 1=Medium 2=Hard
     easy:          { answered: 0, correct: 0, slow: 0 },
     medium:        { answered: 0, correct: 0, slow: 0 },
     hard:          { answered: 0, correct: 0, slow: 0 },
-    daysPracticed: [],  // array of date strings
+    daysPracticed: [],
   };
 }
 
 // ─── TOPIC SCORE ────────────────────────────────────────────────────────────
-// Overall accuracy score for a topic (with slow penalty)
-
 export function topicScore(r) {
   if (!r || r.answered < 3) return null;
   const eff = (r.correct - r.slow) + (r.slow * 0.7);
   return Math.round((eff / r.answered) * 100);
 }
 
-// Score for a specific difficulty within a topic
 export function diffScore(r, diff) {
   const d = r?.[diff];
   if (!d || d.answered < 3) return null;
@@ -148,8 +145,6 @@ export function diffScore(r, diff) {
 }
 
 // ─── TOPIC WEIGHT ───────────────────────────────────────────────────────────
-// Weak topics appear more often in question selection
-
 export function topicWeight(r, sessCount) {
   if (sessCount < 5) return 1;
   const s = topicScore(r);
@@ -161,32 +156,23 @@ export function topicWeight(r, sessCount) {
 }
 
 // ─── IS TOPIC MASTERED ──────────────────────────────────────────────────────
-// ALL THREE difficulties must be cleared to master a topic
-// GK: no speed penalty — uses raw accuracy only
-
 export function isTopicMastered(record, subject, category) {
   if (!record) return false;
 
   for (const diff of ['easy', 'medium', 'hard']) {
     const criteria = getMasteryCriteria(subject, category, diff);
     const d        = record[diff];
-
-    // Minimum questions at this difficulty
     if (!d || d.answered < criteria.minQ) return false;
 
-    // Minimum accuracy
     let acc;
     if (SUBJECT_CONFIG[subject]?.speedPenalty && subject !== 'gk') {
-      // Use slow-adjusted score
       const score = diffScore(record, diff);
       if (score === null || score < criteria.minAcc) return false;
     } else {
-      // GK — raw accuracy only, no slow penalty
       acc = d.answered > 0 ? Math.round((d.correct / d.answered) * 100) : 0;
       if (acc < criteria.minAcc) return false;
     }
 
-    // Minimum days practiced
     const days = record.daysPracticed || [];
     if (days.length < criteria.minDays) return false;
   }
@@ -195,35 +181,22 @@ export function isTopicMastered(record, subject, category) {
 }
 
 // ─── GET TOPIC LEVEL MIX ───────────────────────────────────────────────────
-// Returns question mix ratios per level for a specific topic
-// Purely performance driven — no grade gating
-// Per topic · Per level · Based on accuracy at higher level
-
 export function getTopicLevelMix(topicRecords, subject, topic, category) {
 
-  function rec(level) {
-    return topicRecords[`${subject}_${level}_${topic}`];
-  }
-  function score(level) {
-    return topicScore(rec(level)) || 0;
-  }
-  function mastered(level) {
-    return isTopicMastered(rec(level), subject, category);
-  }
+  function rec(level)      { return topicRecords[`${subject}_${level}_${topic}`]; }
+  function score(level)    { return topicScore(rec(level)) || 0; }
+  function mastered(level) { return isTopicMastered(rec(level), subject, category); }
 
-  // ── Level 6 not mastered — 100% Level 6 ──────────────────────
   if (!mastered('6')) {
     return { '6': 1.0, '7': 0.0, '8': 0.0 };
   }
 
-  // ── Level 6 mastered — introduce Level 7 ─────────────────────
   const l7Score = score('7');
   let l7Share;
-  if (l7Score < 30)      l7Share = 0.20; // < 30%  → 80/20
-  else if (l7Score < 70) l7Share = 0.40; // 30-70% → 60/40
-  else                   l7Share = 0.60; // > 70%  → 40/60
+  if (l7Score < 30)      l7Share = 0.20;
+  else if (l7Score < 70) l7Share = 0.40;
+  else                   l7Share = 0.60;
 
-  // ── Level 7 not mastered — no Level 8 yet ────────────────────
   if (!mastered('7')) {
     return {
       '6': parseFloat((1 - l7Share).toFixed(2)),
@@ -232,12 +205,11 @@ export function getTopicLevelMix(topicRecords, subject, topic, category) {
     };
   }
 
-  // ── Level 7 mastered — introduce Level 8 ─────────────────────
   const l8Score = score('8');
   let l8Share;
-  if (l8Score < 30)      l8Share = 0.20; // < 30%  → 40/40/20
-  else if (l8Score < 70) l8Share = 0.30; // 30-70% → 35/35/30
-  else                   l8Share = 0.40; // > 70%  → 30/30/40 ← permanent
+  if (l8Score < 30)      l8Share = 0.20;
+  else if (l8Score < 70) l8Share = 0.30;
+  else                   l8Share = 0.40;
 
   const remaining = parseFloat((1 - l8Share).toFixed(2));
   const l6Final   = Math.max(0.30, parseFloat((remaining / 2).toFixed(2)));
@@ -251,35 +223,26 @@ export function getTopicLevelMix(topicRecords, subject, topic, category) {
 }
 
 // ─── CHECK TOPIC LEVEL UNLOCK ──────────────────────────────────────────────
-// Returns celebration message when a topic just unlocked a new level
-// Called after every answer
-
 export function checkTopicLevelUnlock(topicRecords, subject, topic, category) {
   const levelNames = { '6': 'Grade VI', '7': 'Grade VII', '8': 'Grade VIII' };
 
-  // Check Level 6 → 7 unlock
   if (isTopicMastered(topicRecords[`${subject}_6_${topic}`], subject, category)) {
     const l7Key = `${subject}_7_${topic}`;
     if (!topicRecords[l7Key] || topicRecords[l7Key].answered === 0) {
       return {
-        unlocked: true,
-        topic,
-        from:    levelNames['6'],
-        to:      levelNames['7'],
+        unlocked: true, topic,
+        from: levelNames['6'], to: levelNames['7'],
         message: `🎉 Amazing! You've mastered ${levelNames['6']} ${topic}! ${levelNames['7']} questions are now unlocking — let's go! 🚀`,
       };
     }
   }
 
-  // Check Level 7 → 8 unlock
   if (isTopicMastered(topicRecords[`${subject}_7_${topic}`], subject, category)) {
     const l8Key = `${subject}_8_${topic}`;
     if (!topicRecords[l8Key] || topicRecords[l8Key].answered === 0) {
       return {
-        unlocked: true,
-        topic,
-        from:    levelNames['7'],
-        to:      levelNames['8'],
+        unlocked: true, topic,
+        from: levelNames['7'], to: levelNames['8'],
         message: `🎉 Incredible! You've mastered ${levelNames['7']} ${topic}! ${levelNames['8']} questions are now unlocking — you're on fire! 🚀`,
       };
     }
@@ -289,21 +252,11 @@ export function checkTopicLevelUnlock(topicRecords, subject, topic, category) {
 }
 
 // ─── SELECT NEXT QUESTION ──────────────────────────────────────────────────
-// The core engine — picks next question using per-topic level mix + weighting
-// Works for all four subjects with no changes
-
-export function selectNextQuestion(
-  allQuestions,   // all questions for this subject from question bank
-  topicRecords,   // student's topic records from store
-  sessionCount,   // number of sessions so far
-  recentIds,      // last 15 question IDs shown this session
-  subject         // 'maths' | 'reasoning' | 'english' | 'gk'
-) {
+export function selectNextQuestion(allQuestions, topicRecords, sessionCount, recentIds, subject) {
   if (!allQuestions.length) return null;
 
-  // Filter out expired GK questions
-  const today     = new Date().toISOString().split('T')[0];
-  const eligible  = allQuestions.filter(q => {
+  const today    = new Date().toISOString().split('T')[0];
+  const eligible = allQuestions.filter(q => {
     if (subject === 'gk' && !q.is_evergreen && q.expires_at) {
       return q.expires_at >= today;
     }
@@ -312,7 +265,7 @@ export function selectNextQuestion(
 
   if (!eligible.length) return null;
 
-  // Group questions by topic → level → difficulty
+  // Group by topic → level → difficulty
   const byTopic = {};
   for (const q of eligible) {
     const level = String(q.question_level || q.level || q.grade || '6');
@@ -334,11 +287,9 @@ export function selectNextQuestion(
 
   for (const [topic, levels] of Object.entries(byTopic)) {
     const category = levels.category || '';
+    const mix      = getTopicLevelMix(topicRecords, subject, topic, category);
 
-    // Get per-topic level mix — purely performance driven
-    const mix = getTopicLevelMix(topicRecords, subject, topic, category);
-
-    // Pick level for this topic based on mix weights
+    // Pick level based on mix weights
     const rand = Math.random();
     let cumulative  = 0;
     let chosenLevel = '6';
@@ -348,38 +299,29 @@ export function selectNextQuestion(
       if (rand <= cumulative) { chosenLevel = level; break; }
     }
 
-    // Get questions for chosen topic + level
     const difficulties = levels[chosenLevel];
     if (!difficulties) continue;
 
-    // Get topic record for chosen level
-    const key    = `${subject}_${chosenLevel}_${topic}`;
-    const record = topicRecords[key] || emptyTopicRecord();
-    const weight = topicWeight(record, sessionCount);
-    const isMast = isTopicMastered(record, subject, category);
-
-    // Determine difficulty — mastered topics start at Hard
+    const key      = `${subject}_${chosenLevel}_${topic}`;
+    const record   = topicRecords[key] || emptyTopicRecord();
+    const weight   = topicWeight(record, sessionCount);
+    const isMast   = isTopicMastered(record, subject, category);
     const diffLevel = record.diffLevel || 0;
     const diffKey   = ['easy', 'medium', 'hard'][diffLevel];
 
-    // Get candidates — exclude recently seen
-    let candidates = difficulties[diffKey]?.filter(
-      q => !recentIds.includes(q.id)
-    ) || [];
+    // Get candidates excluding recent
+    let candidates = difficulties[diffKey]?.filter(q => !recentIds.includes(q.id)) || [];
 
     // Fallback to easier difficulty if exhausted
     if (!candidates.length && diffLevel > 0) {
       const fallback = ['easy', 'medium', 'hard'][diffLevel - 1];
-      candidates = difficulties[fallback]?.filter(
-        q => !recentIds.includes(q.id)
-      ) || [];
+      candidates = difficulties[fallback]?.filter(q => !recentIds.includes(q.id)) || [];
     }
 
     // Allow repeats if all exhausted (spaced repetition)
     if (!candidates.length) candidates = difficulties[diffKey] || [];
     if (!candidates.length) continue;
 
-    // Add weighted slots to pool
     const slots = Math.max(1, Math.round(weight * 2));
     for (let i = 0; i < slots; i++) {
       pool.push({ topic, category, candidates, record, key, chosenLevel, isMast });
@@ -402,30 +344,26 @@ export function selectNextQuestion(
 }
 
 // ─── UPDATE RECORD ──────────────────────────────────────────────────────────
-// Updates topic record after each answer
-// Handles mastery-aware demotion (1 wrong demotes mastered topic)
-// Handles GK (no slow penalty)
+// KEY CHANGE: Promotion based on TOTAL correct at difficulty, not streak
+// Easy → Medium when easy.correct >= 5 (total, not consecutive)
+// Medium → Hard when medium.correct >= 3 (total, not consecutive)
+// Demotion still based on consecutive wrong answers
 
-export function updateRecord(
-  record,
-  isCorrect,
-  isLate,         // true if answer exceeded mastery time threshold
-  difficulty,     // 'easy' | 'medium' | 'hard'
-  today,          // date string e.g. 'Mon May 1 2025'
-  subject,        // for GK — no slow penalty
-  category        // for English comprehension mastery criteria
-) {
+export function updateRecord(record, isCorrect, isLate, difficulty, today, subject, category) {
   const r    = { ...record };
   const diff = (difficulty || 'easy').toLowerCase();
 
-  // Ensure per-difficulty objects exist
   if (!r.easy)   r.easy   = { answered: 0, correct: 0, slow: 0 };
   if (!r.medium) r.medium = { answered: 0, correct: 0, slow: 0 };
   if (!r.hard)   r.hard   = { answered: 0, correct: 0, slow: 0 };
   if (!r.daysPracticed) r.daysPracticed = [];
 
-  // Check if topic is currently mastered
-  const mastered = isTopicMastered(r, subject, category);
+  const mastered   = isTopicMastered(r, subject, category);
+  const cfg        = SUBJECT_CONFIG[subject];
+  const promoteAt  = cfg?.promote || { easy: 5, medium: 3 };
+  const demoteAt   = mastered
+    ? (cfg?.demote?.mastered    || 1)
+    : (cfg?.demote?.unmastered  || 2);
 
   // ── Update counters ──────────────────────────────────────────
   r.answered++;
@@ -435,38 +373,28 @@ export function updateRecord(
     r.correct++;
     r[diff].correct++;
 
-    // Slow penalty — not for GK
-    const applySlowPenalty = SUBJECT_CONFIG[subject]?.speedPenalty && isLate;
+    const applySlowPenalty = cfg?.speedPenalty && isLate;
     if (applySlowPenalty) {
-      r.slow++;
+      r.slow = (r.slow || 0) + 1;
       r[diff].slow++;
     }
 
-    r.streak++;
     r.lastWrong = 0;
 
-    // Promotion thresholds:
-    // Easy → Medium: 5 correct in a row
-    // Medium → Hard: 3 correct in a row
-    // Mastered topic returning from demotion: 3 correct → back to Hard
-    const promoteAt = r.diffLevel === 0
-      ? 5   // Easy → Medium always needs 5
-      : 3;  // Medium → Hard needs 3 (also mastered Medium → Hard)
-
-    if (r.streak >= promoteAt && r.diffLevel < 2) {
-      r.diffLevel++;
-      r.streak = 0;
+    // ── PROMOTION — based on TOTAL correct at current difficulty ──
+    // Easy → Medium: when easy.correct reaches promoteAt.easy
+    // Medium → Hard: when medium.correct reaches promoteAt.medium
+    if (r.diffLevel === 0 && r.easy.correct >= promoteAt.easy) {
+      r.diffLevel = 1; // promote to Medium
+    } else if (r.diffLevel === 1 && r.medium.correct >= promoteAt.medium) {
+      r.diffLevel = 2; // promote to Hard
     }
+    // Already at Hard — stay there unless demoted
 
   } else {
-    r.streak    = 0;
-    r.lastWrong++;
+    r.lastWrong = (r.lastWrong || 0) + 1;
 
-    // Demotion:
-    // Mastered topic: 1 wrong → demote immediately
-    // Unmastered topic: 2 wrong → demote
-    const demoteAt = mastered ? 1 : 2;
-
+    // ── DEMOTION — consecutive wrong answers ──────────────────────
     if (r.lastWrong >= demoteAt && r.diffLevel > 0) {
       r.diffLevel--;
       r.lastWrong = 0;
@@ -475,9 +403,7 @@ export function updateRecord(
 
   // ── Track days practiced ─────────────────────────────────────
   if (today) {
-    const dateStr = typeof today === 'string'
-      ? today
-      : new Date(today).toDateString();
+    const dateStr = typeof today === 'string' ? today : new Date(today).toDateString();
     if (!r.daysPracticed.includes(dateStr)) {
       r.daysPracticed = [...r.daysPracticed, dateStr];
     }
@@ -487,8 +413,6 @@ export function updateRecord(
 }
 
 // ─── SESSION END MESSAGE ────────────────────────────────────────────────────
-// Always positive — student sees strengths only
-
 export function sessionEndMessage(topicRecords, subject, count) {
   const recs = Object.entries(topicRecords)
     .filter(([k]) => k.startsWith(subject + '_'))
@@ -507,10 +431,7 @@ export function sessionEndMessage(topicRecords, subject, count) {
   ];
   const main = mains[Math.floor(Math.random() * mains.length)];
 
-  if (!recs.length) return {
-    main,
-    hint: "Keep going tomorrow — you're building something great!"
-  };
+  if (!recs.length) return { main, hint: "Keep going tomorrow — you're building something great!" };
 
   const tl   = t => t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const best = [...recs].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
@@ -530,8 +451,7 @@ export function sessionEndMessage(topicRecords, subject, count) {
   return { main, hint };
 }
 
-// ─── STRENGTH SUMMARY (student view — positives only) ──────────────────────
-
+// ─── STRENGTH SUMMARY (student view) ───────────────────────────────────────
 export function strengthSummary(topicRecords, subject) {
   const tl = t => t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
@@ -559,9 +479,7 @@ export function strengthSummary(topicRecords, subject) {
   return msg;
 }
 
-// ─── FULL TOPIC BREAKDOWN (parent/teacher view) ─────────────────────────────
-// Groups by level · Shows mastery status · Per-difficulty scores
-
+// ─── FULL TOPIC BREAKDOWN (parent view) ────────────────────────────────────
 export function fullTopicBreakdown(topicRecords, subject) {
   const tl        = t => t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const levelName = l => ({ '6': 'Grade VI', '7': 'Grade VII', '8': 'Grade VIII' }[l] || l);
@@ -599,16 +517,14 @@ export function fullTopicBreakdown(topicRecords, subject) {
 }
 
 // ─── DAILY STREAK ───────────────────────────────────────────────────────────
-// Returns updated streak count based on last practice date
-
 export function calculateStreak(currentStreak, lastPracticeDate) {
   const today     = new Date().toDateString();
   const yesterday = new Date(Date.now() - 86400000).toDateString();
 
-  if (!lastPracticeDate)           return 1;  // first ever session
-  if (lastPracticeDate === today)  return currentStreak; // already practiced today
-  if (lastPracticeDate === yesterday) return currentStreak + 1; // streak continues
-  return 1; // missed a day — reset
+  if (!lastPracticeDate)              return 1;
+  if (lastPracticeDate === today)     return currentStreak;
+  if (lastPracticeDate === yesterday) return currentStreak + 1;
+  return 1;
 }
 
 // ─── GUEST LIMITS ───────────────────────────────────────────────────────────
@@ -617,7 +533,7 @@ export const GUEST_TOTAL       = 36;
 
 export function guestLimitReachedForSubject(guestCounts, subject) {
   const total = Object.values(guestCounts).reduce((a, b) => a + b, 0);
-  if (total >= GUEST_TOTAL)                        return true;
+  if (total >= GUEST_TOTAL)                             return true;
   if ((guestCounts[subject] || 0) >= GUEST_PER_SUBJECT) return true;
   return false;
 }
