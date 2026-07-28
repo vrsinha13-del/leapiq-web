@@ -140,12 +140,14 @@ export default function App() {
 function HomeScreen({ setScreen, startSubject }) {
   const { user, isLoggedIn, topicRecords, sessionHistory, lastSession } = useStore();
   const name       = user?.name?.split(' ')[0] || 'Superstar';
-  const hasHistory = sessionHistory.length > 0;
+  const hasHistory = isLoggedIn && sessionHistory.length > 0;
   const q          = lastSession?.questionsAnswered || 0;
-  const greeting   = hasHistory ? `Welcome back, ${name}! 👋` : `Welcome, ${name}! 👋`;
-  const sub        = hasHistory
-    ? `You practised ${q} questions last time — amazing! Let's try ${Math.max(5, Math.round(q * 0.4))} more today! 🚀`
-    : "Ready to start your learning journey? Let's go! 🚀";
+  const greeting   = isLoggedIn && hasHistory ? `Welcome back, ${name}! 👋` : isLoggedIn ? `Welcome, ${name}! 👋` : 'Welcome! 👋';
+  const sub        = !isLoggedIn
+    ? "Ready to start your learning journey? Let's go! 🚀"
+    : hasHistory && q > 0
+      ? `You practised ${q} questions last time — amazing! Let's try ${Math.max(5, Math.round(q * 0.4))} more today! 🚀`
+      : "Ready to start your learning journey? Let's go! 🚀";
 
   function sessForSubj(sid) {
     return sessionHistory.filter(h => h.subject === sid).length;
@@ -194,8 +196,8 @@ function HomeScreen({ setScreen, startSubject }) {
             {SUBJECTS.map(s => (
               <div key={s.id} style={{ flex:1, background:'rgba(255,255,255,0.1)', borderRadius:12, padding:'10px 6px', textAlign:'center' }}>
                 <div style={{ fontSize:16 }}>{s.icon}</div>
-                <div style={{ fontFamily:"'Syne',system-ui", fontSize:14, fontWeight:700, color:'#fff', marginTop:3 }}>{sessForSubj(s.id)}</div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>sessions</div>
+                <div style={{ fontFamily:"'Syne',system-ui", fontSize:14, fontWeight:700, color:'#fff', marginTop:3 }}>{isLoggedIn ? sessForSubj(s.id) : '—'}</div>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{isLoggedIn ? 'sessions' : 'sign in'}</div>
               </div>
             ))}
           </div>
@@ -212,7 +214,7 @@ function HomeScreen({ setScreen, startSubject }) {
                 <div style={{ width:46, height:46, borderRadius:12, background:s.light, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, marginBottom:10 }}>{s.icon}</div>
                 <div style={{ fontFamily:"'Syne',system-ui", fontSize:14, fontWeight:700, color:'#111', marginBottom:2 }}>{s.label}</div>
                 <div style={{ fontSize:11, color:'#9ca3af', marginBottom:10 }}>adaptive · mixed topics</div>
-                {avg !== null ? (
+                {avg !== null && isLoggedIn ? (
                   <>
                     <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
                       <span style={{ fontSize:11, color:'#6b7280' }}>{sess} sessions</span>
