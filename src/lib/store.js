@@ -99,6 +99,9 @@ export const useStore = create(
           questionsAnswered: 0,
           correct:           0,
           wrong:             0,
+          easyAttempted:     0,
+          mediumAttempted:   0,
+          hardAttempted:     0,
           recentIds:         [],
           startedAt:         Date.now(),
         },
@@ -123,12 +126,16 @@ export const useStore = create(
           ? s.guestCounts
           : { ...s.guestCounts, [subject]: (s.guestCounts[subject] || 0) + 1 };
 
+        const diff = (difficulty || 'easy').toLowerCase();
         const activeSession = s.activeSession ? {
           ...s.activeSession,
           questionsAnswered: s.activeSession.questionsAnswered + 1,
-          correct:  s.activeSession.correct  + (isCorrect ? 1 : 0),
-          wrong:    s.activeSession.wrong    + (isCorrect ? 0 : 1),
-          recentIds: [questionId, ...s.activeSession.recentIds].slice(0, 15),
+          correct:           s.activeSession.correct + (isCorrect ? 1 : 0),
+          wrong:             s.activeSession.wrong   + (isCorrect ? 0 : 1),
+          easyAttempted:     (s.activeSession.easyAttempted   || 0) + (diff === 'easy'   ? 1 : 0),
+          mediumAttempted:   (s.activeSession.mediumAttempted || 0) + (diff === 'medium' ? 1 : 0),
+          hardAttempted:     (s.activeSession.hardAttempted   || 0) + (diff === 'hard'   ? 1 : 0),
+          recentIds:         [questionId, ...s.activeSession.recentIds].slice(0, 15),
         } : null;
 
         set({
@@ -152,8 +159,11 @@ export const useStore = create(
           ? Math.round((Date.now() - s.activeSession.startedAt) / 1000)
           : 0;
 
-        const correct = s.activeSession?.correct || 0;
-        const wrong   = s.activeSession?.wrong   || 0;
+        const correct         = s.activeSession?.correct         || 0;
+        const wrong           = s.activeSession?.wrong           || 0;
+        const easyAttempted   = s.activeSession?.easyAttempted   || 0;
+        const mediumAttempted = s.activeSession?.mediumAttempted || 0;
+        const hardAttempted   = s.activeSession?.hardAttempted   || 0;
 
         // Save to Supabase if logged in
         if (s.isLoggedIn && s.user?.supabaseId) {
@@ -163,6 +173,9 @@ export const useStore = create(
             questionsAnswered,
             correct,
             wrong,
+            easyAttempted,
+            mediumAttempted,
+            hardAttempted,
             durationSeconds,
             level: level || '6',
           }).catch(err => console.error('Session save failed:', err));
