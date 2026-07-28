@@ -117,10 +117,6 @@ export const useStore = create(
         const key   = `${subject}_${level}_${topic}`;
         const today = new Date().toDateString();
 
-        // Debug log - remove after fixing
-        var dbgSession = s.activeSession;
-        console.log('recordAnswer diff=' + difficulty + ' easy=' + (dbgSession ? dbgSession.easyAttempted : 'no session'));
-
         const updated = updateRecord(
           s.topicRecords[key] || emptyTopicRecord(),
           isCorrect, isLate, difficulty, today, subject, category
@@ -168,9 +164,6 @@ export const useStore = create(
         const easyAttempted   = s.activeSession?.easyAttempted   || 0;
         const mediumAttempted = s.activeSession?.mediumAttempted || 0;
         const hardAttempted   = s.activeSession?.hardAttempted   || 0;
-
-        // Debug log - remove after fixing
-        console.log('endSession: easy=' + easyAttempted + ' medium=' + mediumAttempted + ' hard=' + hardAttempted + ' correct=' + correct + ' session=' + JSON.stringify(s.activeSession));
 
         // Save to Supabase if logged in
         if (s.isLoggedIn && s.user?.supabaseId) {
