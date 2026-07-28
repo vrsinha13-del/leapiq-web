@@ -52,6 +52,9 @@ export async function saveSession({
   questionsAnswered,
   correct,
   wrong,
+  easyAttempted,
+  mediumAttempted,
+  hardAttempted,
   durationSeconds,
   level,
 }) {
@@ -66,16 +69,19 @@ export async function saveSession({
     const { error } = await supabase
       .from('session_logs')
       .insert({
-        student_id:       studentId,
+        student_id:        studentId,
         subject,
-        question_level:   level || '6',
-        total_attempted:  total,
-        total_correct:    cor,
-        total_wrong:      wrg,
-        score_pct:        scorePct,
-        duration_seconds: durationSeconds || 0,
-        started_at:       new Date(Date.now() - (durationSeconds||0)*1000).toISOString(),
-        ended_at:         new Date().toISOString(),
+        question_level:    level || '6',
+        total_attempted:   total,
+        total_correct:     cor,
+        total_wrong:       wrg,
+        score_pct:         scorePct,
+        easy_attempted:    easyAttempted   || 0,
+        medium_attempted:  mediumAttempted || 0,
+        hard_attempted:    hardAttempted   || 0,
+        duration_seconds:  durationSeconds || 0,
+        started_at:        new Date(Date.now() - (durationSeconds||0)*1000).toISOString(),
+        ended_at:          new Date().toISOString(),
       });
 
     if (error) {
