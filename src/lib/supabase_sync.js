@@ -66,7 +66,7 @@ export async function saveSession({
     const wrg      = wrong    || 0;
     const scorePct = total > 0 ? Math.round((cor / total) * 100) : 0;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('session_logs')
       .insert({
         student_id:        studentId,
@@ -82,16 +82,57 @@ export async function saveSession({
         duration_seconds:  durationSeconds || 0,
         started_at:        new Date(Date.now() - (durationSeconds||0)*1000).toISOString(),
         ended_at:          new Date().toISOString(),
-      });
+      })
+      .select('id')
+      .single();
 
     if (error) {
       console.error('Session save error:', error);
       return { success: false, error: error.message };
     }
 
-    return { success: true };
+    return { success: true, sessionId: data?.id };
   } catch (err) {
     console.error('Session save exception:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+// ── 3. SAVE STUDENT ANSWERS ─────────────────────────────────────────────────
+// Bulk insert all answers from a session into student_answers table
+// Only called for Supabase questions (UUID IDs)
+
+export async function saveAnswers(studentId, sessionId, answers) {
+  if (!studentId || !sessionId || !answers.length) return { success: false };
+
+  try {
+    const rows = answers.map(a => ({
+      student_id:     studentId,
+      session_id:     sessionId,
+      question_id:    a.question_id,
+      subject:        a.subject,
+      topic:          a.topic,
+      difficulty:     a.difficulty,
+      question_level: a.question_level,
+      answer_given:   a.answer_given,
+      correct_answer: a.correct_answer,
+      is_correct:     a.is_correct,
+      time_taken_sec: a.time_taken_sec,
+      answered_at:    a.answered_at,
+    }));
+
+    const { error } = await supabase
+      .from('student_answers')
+      .insert(rows);
+
+    if (error) {
+      console.error('saveAnswers error:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, count: rows.length };
+  } catch (err) {
+    console.error('saveAnswers exception:', err);
     return { success: false, error: err.message };
   }
 }
