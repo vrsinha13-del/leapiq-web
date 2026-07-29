@@ -284,7 +284,7 @@ function SignupDone({ setScreen, goHome }) {
 
 // ─── PRACTICE ──────────────────────────────────────────────────────────────
 function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
-  const { topicRecords, sessionHistory, isGuestLimited, recordAnswer, questionsCache } = useStore();
+  const { topicRecords, sessionHistory, isGuestLimited, recordAnswer, questionsCache, recentIds: storeRecentIds } = useStore();
   const allQs = (questionsCache && questionsCache[subject]?.length > 0)
     ? questionsCache[subject]
     : (QB[subject] || []);
@@ -296,8 +296,10 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
   const [timer,     setTimer]     = useState(60);
   const [timerMax,  setTimerMax]  = useState(60);
   const [qCount,    setQCount]    = useState(0);
-  const [recentIds, setRecentIds] = useState([]);
   const timerRef = useRef(null);
+
+  // Use store's persistent recentIds — prevents repeats across sessions
+  const recentIds = storeRecentIds || [];
 
   useEffect(() => { loadNext(); return () => clearInterval(timerRef.current); }, []);
 
@@ -313,7 +315,7 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     setIsLate(false);
     setTimer(shown);
     setTimerMax(shown);
-    setRecentIds(prev => [q.id, ...prev].slice(0, 15));
+    // Note: recentIds now updated in store via recordAnswer — no local state needed
     clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setTimer(prev => {
@@ -345,11 +347,20 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     const timeTaken   = timerMax - timer;
     const late        = mastery !== null ? (timeTaken > mastery || timer <= 0) : false;
 
+    // Find index of selected option for answer_given
+    const answerGivenLetter   = 'ABCD'[opts.indexOf(opt)];
+    const correctAnswerLetter = q.ans || q.answer || '';
+
     setSelected(opt);
     setAnswered(true);
     setIsLate(late);
 
-    recordAnswer(subject, q.topic, level, diff, category, correct, late, q.id);
+    // Pass all params including answer letters and time taken
+    recordAnswer(
+      subject, q.topic, level, diff, category,
+      correct, late, q.id,
+      correctAnswerLetter, answerGivenLetter, timeTaken
+    );
     setQCount(c => c + 1);
 
     showToast(correct
