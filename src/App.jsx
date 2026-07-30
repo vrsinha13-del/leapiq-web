@@ -129,8 +129,9 @@ export default function App() {
       {screen === 'auth_prompt'     && <AuthPrompt           setScreen={setScreen} goHome={goHome} />}
       {screen === 'forgot_password' && <ForgotPasswordScreen setScreen={setScreen} goHome={goHome} />}
       {screen === 'forgot_pin'      && <ForgotPINScreen      setScreen={setScreen} goHome={goHome} />}
-      {screen === 'parent_pin'   && <ParentChangePin  setScreen={setScreen} goHome={goHome} />}
-      {screen === 'parent_dash'  && <ParentDashboard  setScreen={setScreen} goHome={goHome} />}
+      {screen === 'parent_signin'  && <SigninScreen     setScreen={setScreen} goHome={goHome} parentOnly={true} />}
+      {screen === 'parent_pin'     && <ParentChangePin  setScreen={setScreen} goHome={goHome} />}
+      {screen === 'parent_dash'    && <ParentDashboard  setScreen={setScreen} goHome={goHome} />}
     </div>
   );
 }
@@ -237,7 +238,7 @@ function HomeScreen({ setScreen, startSubject }) {
             <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>Separate secure login · Full report card</div>
           </div>
           <button style={{ background:'#1e1b4b', border:'none', color:'#fff', borderRadius:10, padding:'8px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:700, fontSize:13 }}
-            onClick={() => setScreen('signin')}>Login →</button>
+            onClick={() => setScreen('parent_signin')}>Login →</button>
         </div>
         {!isLoggedIn && (
           <div style={{ background:'linear-gradient(135deg,#4338ca,#7c3aed)', borderRadius:14, padding:'14px 18px', color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', textAlign:'center', marginTop:12, marginBottom:20 }}
