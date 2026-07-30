@@ -242,9 +242,14 @@ export function SignupScreen({ setScreen, goHome }) {
   );
 }
 
-// ─── SIGN IN — 3 tabs ──────────────────────────────────────────────────────
-export function SigninScreen({ setScreen, goHome }) {
-  const [tab, setTab] = useState('student');
+// ─── SIGN IN — 3 tabs (or 2 tabs for parent portal) ───────────────────────
+export function SigninScreen({ setScreen, goHome, parentOnly = false }) {
+  const [tab, setTab] = useState(parentOnly ? 'parent' : 'student');
+
+  // Tabs to show
+  const tabs = parentOnly
+    ? [['parent','Parent'],['school','School']]
+    : [['student','Student'],['parent','Parent'],['school','School']];
 
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
@@ -254,9 +259,11 @@ export function SigninScreen({ setScreen, goHome }) {
             onClick={goHome}>← Back</button>
         </div>
         <div style={{ fontSize:44, marginBottom:8 }}>👋</div>
-        <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff', marginBottom:16 }}>Welcome back!</div>
+        <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff', marginBottom:16 }}>
+          {parentOnly ? 'Parent / Teacher Login' : 'Welcome back!'}
+        </div>
         <div style={{ display:'flex', background:'rgba(255,255,255,0.15)', borderRadius:12, padding:4, gap:4 }}>
-          {[['student','Student'],['parent','Parent'],['school','School']].map(([id, label]) => (
+          {tabs.map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
               style={{ flex:1, padding:'9px 0', borderRadius:9, border:'none', fontFamily:'inherit', fontWeight:700, fontSize:13, cursor:'pointer',
                 background: tab===id ? '#fff' : 'transparent',
