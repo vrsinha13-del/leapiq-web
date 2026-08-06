@@ -148,7 +148,7 @@ export default function App() {
       {screen === 'signin'                && <SigninScreen         setScreen={setScreen} goHome={goHome} />}
       {screen === 'signup'                && <SignupScreen         setScreen={setScreen} goHome={goHome} />}
       {screen === 'signup_done'           && <SignupDone           setScreen={setScreen} goHome={goHome} />}
-      {screen === 'auth_prompt'           && <AuthPrompt           setScreen={setScreen} goHome={goHome} mandatory={false} />}
+      {screen === 'auth_prompt'           && <AuthPrompt           setScreen={setScreen} goHome={goHome} mandatory={false} onContinue={() => { useStore.getState().markSoftPromptSeen(activeSubject); setScreen('practice'); }} />}
       {screen === 'auth_prompt_mandatory' && <AuthPrompt           setScreen={setScreen} goHome={goHome} mandatory={true} />}
       {screen === 'trial_expired'         && <TrialExpiredScreen   setScreen={setScreen} goHome={goHome} />}
       {screen === 'forgot_password'       && <ForgotPasswordScreen setScreen={setScreen} goHome={goHome} />}
