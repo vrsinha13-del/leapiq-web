@@ -27,6 +27,7 @@ export const useStore = create(
 
       // ── Guest tracking ──────────────────────────────────────
       guestCounts:    {},
+      softPromptSeen: {},  // subjects where soft prompt already shown
 
       // ── Questions cache ─────────────────────────────────────
       questionsCache: {},
@@ -38,14 +39,14 @@ export const useStore = create(
       activeSession:  null,
 
       // ── Persistent recentIds across sessions ─────────────────
-      // Tracks last 30 question IDs across ALL sessions to avoid repeats
       recentIds:      [],
 
       // ── Auth ────────────────────────────────────────────────
       login: (userData) => set({
-        user:        userData,
-        isLoggedIn:  true,
-        guestCounts: {},
+        user:           userData,
+        isLoggedIn:     true,
+        guestCounts:    {},
+        softPromptSeen: {},
       }),
 
       logout: () => set({
@@ -73,7 +74,16 @@ export const useStore = create(
       guestStatus: (subject) => {
         const s = get();
         if (s.isLoggedIn) return 'ok';
-        return guestLimitStatus(s.guestCounts, subject);
+        const count = s.guestCounts[subject] || 0;
+        if (count >= 20) return 'hard';
+        if (count >= 10 && !s.softPromptSeen[subject]) return 'soft';
+        return 'ok';
+      },
+
+      // ── Mark soft prompt seen for subject ─────────────────────
+      markSoftPromptSeen: (subject) => {
+        const s = get();
+        set({ softPromptSeen: { ...s.softPromptSeen, [subject]: true } });
       },
 
       // ── Register ─────────────────────────────────────────────
@@ -278,10 +288,11 @@ export const useStore = create(
         user:           s.user,
         isLoggedIn:     s.isLoggedIn,
         guestCounts:    s.guestCounts,
+        softPromptSeen: s.softPromptSeen,
         topicRecords:   s.topicRecords,
         sessionHistory: s.sessionHistory,
         lastSession:    s.lastSession,
-        recentIds:      s.recentIds,  // persist across sessions
+        recentIds:      s.recentIds,
       }),
     }
   )
