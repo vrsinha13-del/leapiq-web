@@ -15,16 +15,18 @@ export async function registerStudent(userData) {
     const { data, error } = await supabase
       .from('students')
       .insert({
-        full_name:     userData.name,
-        email:         userData.email,
-        grade:         userData.grade,
-        city:          userData.city     || null,
-        country:       'India',
-        password_hash: userData.password,
-        pin:           userData.parentPin,
-        registered_by: 'self',
-        is_active:     true,
-        is_verified:   false,
+        full_name:           userData.name,
+        email:               userData.email,
+        grade:               userData.grade,
+        city:                userData.city     || null,
+        country:             'India',
+        password_hash:       userData.password,
+        pin:                 userData.parentPin,
+        registered_by:       'self',
+        is_active:           true,
+        is_verified:         false,
+        trial_ends_at:       userData.trialEndsAt,
+        subscription_status: 'trial',
       })
       .select()
       .single();
