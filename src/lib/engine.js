@@ -528,12 +528,19 @@ export function calculateStreak(currentStreak, lastPracticeDate) {
 }
 
 // ─── GUEST LIMITS ───────────────────────────────────────────────────────────
-export const GUEST_PER_SUBJECT = 10;
-export const GUEST_TOTAL       = 36;
+// Per subject: 0-10 free, 10 = skippable prompt, 20 = mandatory prompt
+export const GUEST_SOFT_LIMIT = 10;  // show skippable prompt
+export const GUEST_HARD_LIMIT = 20;  // show mandatory prompt — must register
 
+// Returns: 'ok' | 'soft' | 'hard'
+export function guestLimitStatus(guestCounts, subject) {
+  const count = guestCounts[subject] || 0;
+  if (count >= GUEST_HARD_LIMIT) return 'hard';
+  if (count >= GUEST_SOFT_LIMIT) return 'soft';
+  return 'ok';
+}
+
+// Legacy — kept for compatibility
 export function guestLimitReachedForSubject(guestCounts, subject) {
-  const total = Object.values(guestCounts).reduce((a, b) => a + b, 0);
-  if (total >= GUEST_TOTAL)                             return true;
-  if ((guestCounts[subject] || 0) >= GUEST_PER_SUBJECT) return true;
-  return false;
+  return guestLimitStatus(guestCounts, subject) === 'hard';
 }
