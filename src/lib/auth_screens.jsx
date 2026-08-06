@@ -30,35 +30,48 @@ export function AuthPrompt({ setScreen, goHome, mandatory = false }) {
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
       <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
-        <div style={{ fontSize:56, marginBottom:8 }}>🚀</div>
+        <div style={{ fontSize:56, marginBottom:8 }}>{mandatory ? '🎯' : '🚀'}</div>
         <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>
-          {mandatory ? 'Almost there!' : "You're on a roll!"}
+          {mandatory ? "You're doing great!" : "You're on a roll!"}
         </div>
         <div style={{ color:'rgba(255,255,255,0.85)', fontSize:14, lineHeight:1.6 }}>
           {mandatory
-            ? 'Create a free account to keep practising and save your progress. It takes 30 seconds!'
-            : 'Sign in or create a free account to save your progress and practise unlimited questions.'}
+            ? 'Create a free account to keep going. Your progress will be saved and you get 1 month free!'
+            : 'Register to save your progress. It\'s free for 1 month — no credit card needed!'}
         </div>
       </div>
       <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18 }}>
+
+        {/* Already have account */}
         <div style={{ background:'#f0effe', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
           <div style={{ fontSize:13, fontWeight:700, color:'#4338ca', marginBottom:4 }}>Already have an account?</div>
           <div style={{ fontSize:12, color:'#6b7280', marginBottom:14 }}>Sign in to continue where you left off.</div>
           <button style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#4338ca', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}
             onClick={() => setScreen('signin')}>Sign In →</button>
         </div>
+
+        {/* New user */}
         <div style={{ background:'#f0fdf4', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
           <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:4 }}>New to Leap IQ?</div>
-          <div style={{ fontSize:12, color:'#6b7280', marginBottom:14 }}>Create a free account — takes 30 seconds.</div>
+          <div style={{ fontSize:12, color:'#6b7280', marginBottom:4 }}>Free for 1 month · No credit card needed</div>
+          <div style={{ fontSize:12, color:'#166534', fontWeight:600, marginBottom:14 }}>✓ Save progress ✓ All subjects ✓ Parent dashboard</div>
           <button style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#166534', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}
-            onClick={() => setScreen('signup')}>Create Free Account →</button>
+            onClick={() => setScreen('signup')}>Start Free Month →</button>
         </div>
+
         {!mandatory && (
           <button style={{ width:'100%', padding:13, border:'1.5px solid #e5e7eb', borderRadius:13, background:'#fff', color:'#374151', fontFamily:'inherit', fontWeight:700, fontSize:14, cursor:'pointer' }}
-            onClick={goHome}>Maybe later — go home</button>
+            onClick={goHome}>Skip for now</button>
         )}
+
+        {mandatory && (
+          <div style={{ background:'#fef3c7', borderRadius:12, padding:'12px 14px', fontSize:12, color:'#92400e', fontWeight:600, textAlign:'center', lineHeight:1.5 }}>
+            ⚠ You've reached the free limit for this subject. Register free to continue!
+          </div>
+        )}
+
         <p style={{ fontSize:11, color:'#9ca3af', textAlign:'center', marginTop:16, lineHeight:1.5 }}>
-          Free forever · No credit card needed · Your data stays private
+          Free for 1 month · No credit card needed · Your data stays private
         </p>
       </div>
     </div>
