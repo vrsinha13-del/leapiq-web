@@ -71,7 +71,7 @@ export default function App() {
   const [screen, setScreen]               = useState('home');
   const [activeSubject, setActiveSubject] = useState(null);
   const [sessionResult, setSessionResult] = useState(null);
-  const { isLoggedIn, questionsCache, setQuestionsCache } = useStore();
+  const { isLoggedIn, questionsCache, setQuestionsCache, trialDaysLeft } = useStore();
 
   useEffect(() => {
     async function loadQuestions() {
@@ -96,6 +96,15 @@ export default function App() {
     loadQuestions();
   }, []);
 
+  // Trial warning — show banner when 7 days or less remaining
+  const daysLeft  = trialDaysLeft ? trialDaysLeft() : null;
+  const showTrialWarning = isLoggedIn && daysLeft !== null && daysLeft <= 7 && daysLeft > 0;
+
+  function onLoginRequired(mandatory = false) {
+    if (mandatory) setScreen('auth_prompt_mandatory');
+    else setScreen('auth_prompt');
+  }
+
   const subj = SUBJECTS.find(s => s.id === activeSubject);
 
   function startSubject(sid) {
@@ -119,19 +128,34 @@ export default function App() {
   return (
     <div style={{ fontFamily:"'Nunito',system-ui,sans-serif", minHeight:'100dvh', background:'#f0effe', overflowX:'hidden' }}>
       <style>{CSS}</style>
-      {screen === 'home'         && <HomeScreen       setScreen={setScreen} startSubject={startSubject} />}
-      {screen === 'practice'     && <PracticeScreen   setScreen={setScreen} subject={activeSubject} subj={subj} onEnd={onSessionEnd} onLoginRequired={() => setScreen('auth_prompt')} />}
-      {screen === 'session_end'  && <SessionEndScreen setScreen={setScreen} result={sessionResult} subj={subj} startSubject={startSubject} goHome={goHome} />}
-      {screen === 'report'       && <StudentReport    setScreen={setScreen} goHome={goHome} />}
-      {screen === 'signin'          && <SigninScreen         setScreen={setScreen} goHome={goHome} />}
-      {screen === 'signup'          && <SignupScreen         setScreen={setScreen} goHome={goHome} />}
-      {screen === 'signup_done'     && <SignupDone           setScreen={setScreen} goHome={goHome} />}
-      {screen === 'auth_prompt'     && <AuthPrompt           setScreen={setScreen} goHome={goHome} />}
-      {screen === 'forgot_password' && <ForgotPasswordScreen setScreen={setScreen} goHome={goHome} />}
-      {screen === 'forgot_pin'      && <ForgotPINScreen      setScreen={setScreen} goHome={goHome} />}
-      {screen === 'parent_signin'  && <SigninScreen     setScreen={setScreen} goHome={goHome} parentOnly={true} />}
-      {screen === 'parent_pin'     && <ParentChangePin  setScreen={setScreen} goHome={goHome} />}
-      {screen === 'parent_dash'    && <ParentDashboard  setScreen={setScreen} goHome={goHome} />}
+
+      {/* Trial warning banner — shown on home screen when 7 days or less left */}
+      {showTrialWarning && screen === 'home' && (
+        <div style={{ background:'#fef3c7', borderBottom:'1px solid #fcd34d', padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12 }}>
+          <div style={{ fontSize:13, color:'#92400e', fontWeight:600 }}>
+            ⏰ Your free trial ends in {daysLeft} day{daysLeft !== 1 ? 's' : ''}
+          </div>
+          <button style={{ background:'#d97706', border:'none', color:'#fff', borderRadius:8, padding:'6px 14px', cursor:'pointer', fontFamily:'inherit', fontWeight:700, fontSize:12 }}>
+            Subscribe Now
+          </button>
+        </div>
+      )}
+
+      {screen === 'home'                  && <HomeScreen           setScreen={setScreen} startSubject={startSubject} />}
+      {screen === 'practice'              && <PracticeScreen       setScreen={setScreen} subject={activeSubject} subj={subj} onEnd={onSessionEnd} onLoginRequired={onLoginRequired} />}
+      {screen === 'session_end'           && <SessionEndScreen     setScreen={setScreen} result={sessionResult} subj={subj} startSubject={startSubject} goHome={goHome} />}
+      {screen === 'report'                && <StudentReport        setScreen={setScreen} goHome={goHome} />}
+      {screen === 'signin'                && <SigninScreen         setScreen={setScreen} goHome={goHome} />}
+      {screen === 'signup'                && <SignupScreen         setScreen={setScreen} goHome={goHome} />}
+      {screen === 'signup_done'           && <SignupDone           setScreen={setScreen} goHome={goHome} />}
+      {screen === 'auth_prompt'           && <AuthPrompt           setScreen={setScreen} goHome={goHome} mandatory={false} />}
+      {screen === 'auth_prompt_mandatory' && <AuthPrompt           setScreen={setScreen} goHome={goHome} mandatory={true} />}
+      {screen === 'trial_expired'         && <TrialExpiredScreen   setScreen={setScreen} goHome={goHome} />}
+      {screen === 'forgot_password'       && <ForgotPasswordScreen setScreen={setScreen} goHome={goHome} />}
+      {screen === 'forgot_pin'            && <ForgotPINScreen      setScreen={setScreen} goHome={goHome} />}
+      {screen === 'parent_signin'         && <SigninScreen         setScreen={setScreen} goHome={goHome} parentOnly={true} />}
+      {screen === 'parent_pin'            && <ParentChangePin      setScreen={setScreen} goHome={goHome} />}
+      {screen === 'parent_dash'           && <ParentDashboard      setScreen={setScreen} goHome={goHome} />}
     </div>
   );
 }
@@ -282,9 +306,48 @@ function SignupDone({ setScreen, goHome }) {
   );
 }
 
+// ─── TRIAL EXPIRED ─────────────────────────────────────────────────────────
+function TrialExpiredScreen({ setScreen, goHome }) {
+  const { user } = useStore();
+  return (
+    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
+        <div style={{ fontSize:56, marginBottom:8 }}>⏰</div>
+        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>
+          Your free trial has ended
+        </div>
+        <div style={{ color:'rgba(255,255,255,0.85)', fontSize:14, lineHeight:1.6 }}>
+          You had 30 days of free access. Subscribe to continue your learning journey!
+        </div>
+      </div>
+      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18 }}>
+        <div style={{ background:'#f0effe', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
+          <div style={{ fontSize:32, marginBottom:8 }}>📊</div>
+          <div style={{ fontSize:14, fontWeight:700, color:'#4338ca', marginBottom:4 }}>Your progress is safe!</div>
+          <div style={{ fontSize:13, color:'#6b7280', lineHeight:1.6 }}>
+            All your topic progress and session history is saved. Subscribe to continue from where you left off.
+          </div>
+        </div>
+        <div style={{ background:'linear-gradient(135deg,#4338ca,#7c3aed)', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'rgba(255,255,255,0.8)', marginBottom:4 }}>Leap IQ Premium</div>
+          <div style={{ fontFamily:"'Syne',system-ui", fontSize:28, fontWeight:800, color:'#fff', marginBottom:4 }}>₹299 / month</div>
+          <div style={{ fontSize:12, color:'rgba(255,255,255,0.75)', marginBottom:16 }}>Unlimited questions · All subjects · Progress tracking</div>
+          <button style={{ width:'100%', padding:14, border:'none', borderRadius:12, background:'#fff', color:'#4338ca', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}>
+            Subscribe Now →
+          </button>
+        </div>
+        <button style={{ width:'100%', padding:13, border:'1.5px solid #e5e7eb', borderRadius:13, background:'#fff', color:'#374151', fontFamily:'inherit', fontWeight:700, fontSize:14, cursor:'pointer' }}
+          onClick={() => setScreen('report')}>
+          📊 View My Progress
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── PRACTICE ──────────────────────────────────────────────────────────────
 function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
-  const { topicRecords, sessionHistory, isGuestLimited, recordAnswer, questionsCache, recentIds: storeRecentIds } = useStore();
+  const { topicRecords, sessionHistory, isGuestLimited, guestStatus, recordAnswer, questionsCache, recentIds: storeRecentIds, isTrialExpired } = useStore();
   const allQs = (questionsCache && questionsCache[subject]?.length > 0)
     ? questionsCache[subject]
     : (QB[subject] || []);
@@ -298,13 +361,19 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
   const [qCount,    setQCount]    = useState(0);
   const timerRef = useRef(null);
 
-  // Use store's persistent recentIds — prevents repeats across sessions
   const recentIds = storeRecentIds || [];
 
   useEffect(() => { loadNext(); return () => clearInterval(timerRef.current); }, []);
 
   function loadNext() {
-    if (isGuestLimited(subject)) { onLoginRequired(); return; }
+    // Check trial expired
+    if (isTrialExpired && isTrialExpired()) { setScreen('trial_expired'); return; }
+
+    // Check guest limits
+    const status = guestStatus ? guestStatus(subject) : (isGuestLimited(subject) ? 'hard' : 'ok');
+    if (status === 'hard') { onLoginRequired(true); return; }
+    if (status === 'soft') { onLoginRequired(false); return; }
+
     const res = selectNextQuestion(allQs, topicRecords, sessionHistory.length, recentIds, subject);
     if (!res) return;
     const { question: q } = res;
@@ -315,7 +384,6 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     setIsLate(false);
     setTimer(shown);
     setTimerMax(shown);
-    // Note: recentIds now updated in store via recordAnswer — no local state needed
     clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setTimer(prev => {
