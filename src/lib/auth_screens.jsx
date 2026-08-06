@@ -26,7 +26,7 @@ function showToast(msg, bg='#1e1b4b') {
 }
 
 // ─── AUTH PROMPT ───────────────────────────────────────────────────────────
-export function AuthPrompt({ setScreen, goHome, mandatory = false }) {
+export function AuthPrompt({ setScreen, goHome, mandatory = false, onContinue }) {
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
       <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
@@ -61,7 +61,7 @@ export function AuthPrompt({ setScreen, goHome, mandatory = false }) {
 
         {!mandatory && (
           <button style={{ width:'100%', padding:13, border:'1.5px solid #e5e7eb', borderRadius:13, background:'#fff', color:'#374151', fontFamily:'inherit', fontWeight:700, fontSize:14, cursor:'pointer' }}
-            onClick={goHome}>Skip for now</button>
+            onClick={onContinue || goHome}>Skip for now — continue practising</button>
         )}
 
         {mandatory && (
