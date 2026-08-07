@@ -486,6 +486,13 @@ export function updateRecord(record, isCorrect, isLate, difficulty, today, subje
 
 // ─── SESSION END MESSAGE ────────────────────────────────────────────────────
 export function sessionEndMessage(topicRecords, subject, count) {
+  // Don't show session end message if no questions answered
+  if (!count || count === 0) {
+    return {
+      main: "Come back and practise! 💪",
+      hint: "Every question makes you smarter. Start a session and give it your best shot!",
+    };
+  }
   const recs = Object.entries(topicRecords)
     .filter(([k]) => k.startsWith(subject + '_'))
     .map(([k, r]) => {
