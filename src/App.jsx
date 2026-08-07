@@ -114,6 +114,7 @@ export default function App() {
   }
 
   function onSessionEnd(result) {
+    if (result.skipEndScreen) { goHome(); return; }
     useStore.getState().endSession(
       result.subject,
       result.questionsAnswered,
@@ -449,8 +450,15 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
 
   function handlePracticeLater() {
     clearInterval(timerRef.current);
-    const level = current?.question?.question_level || current?.question?.level || current?.question?.grade || '6';
-    onEnd({ subject, questionsAnswered: qCount, subj, level });
+    const level    = current?.question?.question_level || current?.question?.level || current?.question?.grade || '6';
+    const answered = useStore.getState().activeSession?.questionsAnswered || qCount;
+    // If no questions answered — just go home, don't show session end screen
+    if (!answered || answered === 0) {
+      useStore.getState().endSession(subject, 0, level);
+      onEnd({ subject, questionsAnswered: 0, subj, level, skipEndScreen: true });
+      return;
+    }
+    onEnd({ subject, questionsAnswered: answered, subj, level });
   }
 
   if (!current) return (
