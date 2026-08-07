@@ -14,9 +14,7 @@ export const SUBJECT_CONFIG = {
       medium: { minQ: 60,  minAcc: 85, minDays: 7 },
       hard:   { minQ: 30,  minAcc: 80, minDays: 7 },
     },
-    // Promotion thresholds — TOTAL correct at this difficulty
     promote: { easy: 5, medium: 3 },
-    // Demotion — wrong answers in a row
     demote:  { unmastered: 2, mastered: 1 },
   },
 
@@ -79,6 +77,20 @@ export const SUBJECT_CONFIG = {
 
 export const DIFF_LABEL = ['Easy', 'Medium', 'Hard'];
 
+// ─── ADAPTIVE THRESHOLD ─────────────────────────────────────────────────────
+// Minimum questions per subject before adaptive weighting kicks in
+export const ADAPTIVE_THRESHOLD = 200;
+
+// Minimum answers per topic before it gets adaptive scoring
+export const MIN_TOPIC_ANSWERS = 5;
+
+// Topic cooldown — how many different topics must be served before
+// the same topic can be served again
+export const TOPIC_COOLDOWN = 3;
+
+// Per-topic recent questions — how many questions to block per topic
+export const RECENT_PER_TOPIC = 4;
+
 // ─── GET TIMER ──────────────────────────────────────────────────────────────
 export function getTimers(subject, category, difficulty) {
   const cfg  = SUBJECT_CONFIG[subject];
@@ -122,7 +134,7 @@ export function emptyTopicRecord() {
     correct:       0,
     slow:          0,
     lastWrong:     0,
-    diffLevel:     0,   // 0=Easy 1=Medium 2=Hard
+    diffLevel:     0,
     easy:          { answered: 0, correct: 0, slow: 0 },
     medium:        { answered: 0, correct: 0, slow: 0 },
     hard:          { answered: 0, correct: 0, slow: 0 },
@@ -145,14 +157,32 @@ export function diffScore(r, diff) {
 }
 
 // ─── TOPIC WEIGHT ───────────────────────────────────────────────────────────
-export function topicWeight(r, sessCount) {
-  if (sessCount < 5) return 1;
+// Two phases:
+// Phase 1 (< 200 questions per subject): Coverage phase
+//   - Never served topics get highest weight
+//   - Encourages exploring all topics before repeating
+// Phase 2 (>= 200 questions per subject): Adaptive phase
+//   - Weak topics get higher weight
+//   - Strong topics get lower weight
+//   - Requires minimum 5 answers per topic for scoring
+export function topicWeight(r, totalSubjectAnswered) {
+  if (totalSubjectAnswered < ADAPTIVE_THRESHOLD) {
+    // ── Phase 1: Coverage phase ──
+    if (!r || r.answered === 0) return 2;    // never served → highest priority
+    if (r.answered < 5)         return 1;    // served a little → normal
+    return 0.5;                              // served enough → lower priority
+  }
+
+  // ── Phase 2: Adaptive phase ──
+  // Need minimum answers per topic for meaningful score
+  if (!r || r.answered < MIN_TOPIC_ANSWERS) return 1.5;
+
   const s = topicScore(r);
-  if (s === null) return 1.5;
-  if (s < 50)    return 3;
-  if (s < 70)    return 2;
-  if (s < 85)    return 1;
-  return 0.5;
+  if (s === null) return 1.5;  // not enough data
+  if (s < 50)    return 3;     // weak → 3x more likely
+  if (s < 70)    return 2;     // average → 2x more likely
+  if (s < 85)    return 1;     // good → normal
+  return 0.5;                  // strong → half as likely
 }
 
 // ─── IS TOPIC MASTERED ──────────────────────────────────────────────────────
@@ -164,12 +194,11 @@ export function isTopicMastered(record, subject, category) {
     const d        = record[diff];
     if (!d || d.answered < criteria.minQ) return false;
 
-    let acc;
     if (SUBJECT_CONFIG[subject]?.speedPenalty && subject !== 'gk') {
       const score = diffScore(record, diff);
       if (score === null || score < criteria.minAcc) return false;
     } else {
-      acc = d.answered > 0 ? Math.round((d.correct / d.answered) * 100) : 0;
+      const acc = d.answered > 0 ? Math.round((d.correct / d.answered) * 100) : 0;
       if (acc < criteria.minAcc) return false;
     }
 
@@ -182,14 +211,11 @@ export function isTopicMastered(record, subject, category) {
 
 // ─── GET TOPIC LEVEL MIX ───────────────────────────────────────────────────
 export function getTopicLevelMix(topicRecords, subject, topic, category) {
-
   function rec(level)      { return topicRecords[`${subject}_${level}_${topic}`]; }
   function score(level)    { return topicScore(rec(level)) || 0; }
   function mastered(level) { return isTopicMastered(rec(level), subject, category); }
 
-  if (!mastered('6')) {
-    return { '6': 1.0, '7': 0.0, '8': 0.0 };
-  }
+  if (!mastered('6')) return { '6': 1.0, '7': 0.0, '8': 0.0 };
 
   const l7Score = score('7');
   let l7Share;
@@ -232,7 +258,7 @@ export function checkTopicLevelUnlock(topicRecords, subject, topic, category) {
       return {
         unlocked: true, topic,
         from: levelNames['6'], to: levelNames['7'],
-        message: `🎉 Amazing! You've mastered ${levelNames['6']} ${topic}! ${levelNames['7']} questions are now unlocking — let's go! 🚀`,
+        message: `Amazing! You have mastered ${levelNames['6']} ${topic}! ${levelNames['7']} questions unlocking now! 🚀`,
       };
     }
   }
@@ -243,7 +269,7 @@ export function checkTopicLevelUnlock(topicRecords, subject, topic, category) {
       return {
         unlocked: true, topic,
         from: levelNames['7'], to: levelNames['8'],
-        message: `🎉 Incredible! You've mastered ${levelNames['7']} ${topic}! ${levelNames['8']} questions are now unlocking — you're on fire! 🚀`,
+        message: `Incredible! You have mastered ${levelNames['7']} ${topic}! ${levelNames['8']} questions unlocking now! 🔥`,
       };
     }
   }
@@ -252,7 +278,12 @@ export function checkTopicLevelUnlock(topicRecords, subject, topic, category) {
 }
 
 // ─── SELECT NEXT QUESTION ──────────────────────────────────────────────────
-export function selectNextQuestion(allQuestions, topicRecords, sessionCount, recentIds, subject) {
+// recentIds is now an OBJECT: { topicKey: [id1, id2, id3, id4] }
+// recentTopics is an ARRAY of last 3 topic keys served
+export function selectNextQuestion(
+  allQuestions, topicRecords, totalSubjectAnswered,
+  recentIds, subject, recentTopics
+) {
   if (!allQuestions.length) return null;
 
   const today    = new Date().toISOString().split('T')[0];
@@ -283,7 +314,14 @@ export function selectNextQuestion(allQuestions, topicRecords, sessionCount, rec
 
   if (!Object.keys(byTopic).length) return null;
 
-  const pool = [];
+  // Calculate total answered for this subject
+  const totalAnswered = totalSubjectAnswered ||
+    Object.keys(topicRecords)
+      .filter(k => k.startsWith(subject + '_'))
+      .reduce((sum, k) => sum + (topicRecords[k]?.answered || 0), 0);
+
+  const pool          = [];
+  const recentTopicArr = recentTopics || [];
 
   for (const [topic, levels] of Object.entries(byTopic)) {
     const category = levels.category || '';
@@ -304,33 +342,74 @@ export function selectNextQuestion(allQuestions, topicRecords, sessionCount, rec
 
     const key      = `${subject}_${chosenLevel}_${topic}`;
     const record   = topicRecords[key] || emptyTopicRecord();
-    const weight   = topicWeight(record, sessionCount);
+    const weight   = topicWeight(record, totalAnswered);
     const isMast   = isTopicMastered(record, subject, category);
     const diffLevel = record.diffLevel || 0;
     const diffKey   = ['easy', 'medium', 'hard'][diffLevel];
 
-    // Get candidates excluding recent
-    let candidates = difficulties[diffKey]?.filter(q => !recentIds.includes(q.id)) || [];
+    // ── FIX 1: Per-topic recentIds ──────────────────────────────
+    // Block only the last RECENT_PER_TOPIC questions for THIS topic
+    const topicRecentIds = (recentIds && recentIds[key]) || [];
+    let candidates = difficulties[diffKey]?.filter(
+      q => !topicRecentIds.includes(q.id)
+    ) || [];
 
     // Fallback to easier difficulty if exhausted
     if (!candidates.length && diffLevel > 0) {
       const fallback = ['easy', 'medium', 'hard'][diffLevel - 1];
-      candidates = difficulties[fallback]?.filter(q => !recentIds.includes(q.id)) || [];
+      candidates = difficulties[fallback]?.filter(
+        q => !topicRecentIds.includes(q.id)
+      ) || [];
     }
 
-    // Allow repeats if all exhausted (spaced repetition)
+    // Allow repeats only if truly exhausted
     if (!candidates.length) candidates = difficulties[diffKey] || [];
     if (!candidates.length) continue;
 
-    const slots = Math.max(1, Math.round(weight * 2));
-    for (let i = 0; i < slots; i++) {
-      pool.push({ topic, category, candidates, record, key, chosenLevel, isMast });
+    // ── FIX 2: Topic cooldown ────────────────────────────────────
+    // If this topic was served in the last TOPIC_COOLDOWN questions,
+    // give it 0 slots UNLESS it's the only topic available
+    const inCooldown = recentTopicArr.includes(key);
+
+    const slots = inCooldown ? 0 : Math.max(1, Math.round(weight * 2));
+
+    if (slots > 0) {
+      for (let i = 0; i < slots; i++) {
+        pool.push({ topic, category, candidates, record, key, chosenLevel, isMast });
+      }
     }
   }
 
-  if (!pool.length) return null;
+  // If all topics are in cooldown (edge case with very few topics),
+  // fall back to all topics ignoring cooldown
+  let finalPool = pool;
+  if (!pool.length) {
+    for (const [topic, levels] of Object.entries(byTopic)) {
+      const category = levels.category || '';
+      const mix      = getTopicLevelMix(topicRecords, subject, topic, category);
+      const rand     = Math.random();
+      let cumulative  = 0;
+      let chosenLevel = '6';
+      for (const [level, weight] of Object.entries(mix)) {
+        if (weight <= 0) continue;
+        cumulative += weight;
+        if (rand <= cumulative) { chosenLevel = level; break; }
+      }
+      const difficulties = levels[chosenLevel];
+      if (!difficulties) continue;
+      const key         = `${subject}_${chosenLevel}_${topic}`;
+      const record      = topicRecords[key] || emptyTopicRecord();
+      const diffLevel   = record.diffLevel || 0;
+      const diffKey     = ['easy', 'medium', 'hard'][diffLevel];
+      const candidates  = difficulties[diffKey] || [];
+      if (!candidates.length) continue;
+      finalPool.push({ topic, category, candidates, record, key, chosenLevel, isMast: false });
+    }
+  }
 
-  const slot = pool[Math.floor(Math.random() * pool.length)];
+  if (!finalPool.length) return null;
+
+  const slot = finalPool[Math.floor(Math.random() * finalPool.length)];
   const q    = slot.candidates[Math.floor(Math.random() * slot.candidates.length)];
 
   return {
@@ -344,7 +423,7 @@ export function selectNextQuestion(allQuestions, topicRecords, sessionCount, rec
 }
 
 // ─── UPDATE RECORD ──────────────────────────────────────────────────────────
-// KEY CHANGE: Promotion based on TOTAL correct at difficulty, not streak
+// Promotion based on TOTAL correct at difficulty, not streak
 // Easy → Medium when easy.correct >= 5 (total, not consecutive)
 // Medium → Hard when medium.correct >= 3 (total, not consecutive)
 // Demotion still based on consecutive wrong answers
@@ -365,7 +444,6 @@ export function updateRecord(record, isCorrect, isLate, difficulty, today, subje
     ? (cfg?.demote?.mastered    || 1)
     : (cfg?.demote?.unmastered  || 2);
 
-  // ── Update counters ──────────────────────────────────────────
   r.answered++;
   r[diff].answered++;
 
@@ -381,27 +459,21 @@ export function updateRecord(record, isCorrect, isLate, difficulty, today, subje
 
     r.lastWrong = 0;
 
-    // ── PROMOTION — based on TOTAL correct at current difficulty ──
-    // Easy → Medium: when easy.correct reaches promoteAt.easy
-    // Medium → Hard: when medium.correct reaches promoteAt.medium
+    // Promotion — total correct at current difficulty
     if (r.diffLevel === 0 && r.easy.correct >= promoteAt.easy) {
-      r.diffLevel = 1; // promote to Medium
+      r.diffLevel = 1;
     } else if (r.diffLevel === 1 && r.medium.correct >= promoteAt.medium) {
-      r.diffLevel = 2; // promote to Hard
+      r.diffLevel = 2;
     }
-    // Already at Hard — stay there unless demoted
-
   } else {
     r.lastWrong = (r.lastWrong || 0) + 1;
 
-    // ── DEMOTION — consecutive wrong answers ──────────────────────
     if (r.lastWrong >= demoteAt && r.diffLevel > 0) {
       r.diffLevel--;
       r.lastWrong = 0;
     }
   }
 
-  // ── Track days practiced ─────────────────────────────────────
   if (today) {
     const dateStr = typeof today === 'string' ? today : new Date(today).toDateString();
     if (!r.daysPracticed.includes(dateStr)) {
@@ -424,14 +496,14 @@ export function sessionEndMessage(topicRecords, subject, count) {
     .filter(t => t.ans >= 3);
 
   const mains = [
-    `Amazing! ${count} questions today. You're on fire! 🔥`,
+    `Amazing! ${count} questions today. You are on fire! 🔥`,
     `Fantastic! ${count} questions answered. Keep this up! ⭐`,
     `Brilliant — ${count} questions! Getting better every day! 🚀`,
     `Wow, ${count} questions! Be really proud! 🏆`,
   ];
   const main = mains[Math.floor(Math.random() * mains.length)];
 
-  if (!recs.length) return { main, hint: "Keep going tomorrow — you're building something great!" };
+  if (!recs.length) return { main, hint: "Keep going tomorrow — you are building something great!" };
 
   const tl   = t => t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const best = [...recs].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
@@ -439,13 +511,13 @@ export function sessionEndMessage(topicRecords, subject, count) {
 
   let hint = '';
   if (best && (best.score || 0) >= 70) {
-    hint = `You're doing great in ${tl(best.topic)}! 🌟`;
+    hint = `You are doing great in ${tl(best.topic)}! 🌟`;
     if (weak && weak.topic !== best.topic && (weak.score || 0) < 65)
-      hint += ` A little more practice in ${tl(weak.topic)} and you'll be unstoppable! 💪`;
+      hint += ` A little more practice in ${tl(weak.topic)} and you will be unstoppable! 💪`;
     else
       hint += ' Come back tomorrow to keep that streak going!';
   } else {
-    hint = "You're making great progress! Every question makes you smarter. See you tomorrow! 💪";
+    hint = "You are making great progress! Every question makes you smarter. See you tomorrow! 💪";
   }
 
   return { main, hint };
@@ -471,7 +543,7 @@ export function strengthSummary(topicRecords, subject) {
   const good  = recs.filter(r => r.score >= 55 && r.score < 75).map(r => tl(r.topic));
 
   if (!stars.length && !good.length)
-    return "You're making great progress! Keep practising! 💪";
+    return "You are making great progress! Keep practising! 💪";
 
   let msg = '';
   if (stars.length) msg += `⭐ Star at: ${stars.join(', ')}!`;
@@ -528,11 +600,9 @@ export function calculateStreak(currentStreak, lastPracticeDate) {
 }
 
 // ─── GUEST LIMITS ───────────────────────────────────────────────────────────
-// Per subject: 0-10 free, 10 = skippable prompt, 20 = mandatory prompt
-export const GUEST_SOFT_LIMIT = 10;  // show skippable prompt
-export const GUEST_HARD_LIMIT = 20;  // show mandatory prompt — must register
+export const GUEST_SOFT_LIMIT = 10;
+export const GUEST_HARD_LIMIT = 20;
 
-// Returns: 'ok' | 'soft' | 'hard'
 export function guestLimitStatus(guestCounts, subject) {
   const count = guestCounts[subject] || 0;
   if (count >= GUEST_HARD_LIMIT) return 'hard';
@@ -540,7 +610,6 @@ export function guestLimitStatus(guestCounts, subject) {
   return 'ok';
 }
 
-// Legacy — kept for compatibility
 export function guestLimitReachedForSubject(guestCounts, subject) {
   return guestLimitStatus(guestCounts, subject) === 'hard';
 }
