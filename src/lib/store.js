@@ -38,8 +38,13 @@ export const useStore = create(
       lastSession:    null,
       activeSession:  null,
 
-      // ── Persistent recentIds across sessions ─────────────────
-      recentIds:      [],
+      // ── Per-topic recentIds — blocks last 4 questions per topic
+      // Object: { 'maths_6_LCM': ['id1','id2','id3','id4'] }
+      recentIds:    {},
+
+      // ── Recent topics — last 3 topics served
+      // Array: ['maths_6_LCM', 'maths_6_Fractions', 'maths_6_Decimals']
+      recentTopics: [],
 
       // ── Auth ────────────────────────────────────────────────
       login: (userData) => set({
@@ -181,8 +186,15 @@ export const useStore = create(
           answered_at:    new Date().toISOString(),
         } : null;
 
-        // Update persistent recentIds — last 30 across all sessions
-        const recentIds = [questionId, ...s.recentIds].slice(0, 30);
+        // FIX 1: Per-topic recentIds — block last 4 questions per topic
+        const topicRecentIds = (s.recentIds && s.recentIds[key]) || [];
+        const recentIds = {
+          ...(s.recentIds || {}),
+          [key]: [questionId, ...topicRecentIds].slice(0, 4),
+        };
+
+        // FIX 2: Topic cooldown — track last 3 topics served
+        const recentTopics = [key, ...(s.recentTopics || [])].slice(0, 3);
 
         const activeSession = s.activeSession ? {
           ...s.activeSession,
@@ -202,6 +214,7 @@ export const useStore = create(
           guestCounts,
           activeSession,
           recentIds,
+          recentTopics,
         });
       },
 
@@ -293,6 +306,7 @@ export const useStore = create(
         sessionHistory: s.sessionHistory,
         lastSession:    s.lastSession,
         recentIds:      s.recentIds,
+        recentTopics:   s.recentTopics,
       }),
     }
   )
