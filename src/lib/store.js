@@ -38,13 +38,11 @@ export const useStore = create(
       lastSession:    null,
       activeSession:  null,
 
-      // ── Per-topic recentIds — blocks last 4 questions per topic
-      // Object: { 'maths_6_LCM': ['id1','id2','id3','id4'] }
-      recentIds:    {},
-
-      // ── Recent topics — last 3 topics served
-      // Array: ['maths_6_LCM', 'maths_6_Fractions', 'maths_6_Decimals']
-      recentTopics: [],
+      // ── Question answer tracking ──────────────────────────────────
+      // answeredCorrectly: { questionId: true } — never show again
+      // answeredWrongly: { questionId: topicAnsweredCount } — retry after 10
+      answeredCorrectly: {},
+      answeredWrongly:   {},
 
       // ── Auth ────────────────────────────────────────────────
       login: (userData) => set({
@@ -186,15 +184,16 @@ export const useStore = create(
           answered_at:    new Date().toISOString(),
         } : null;
 
-        // FIX 1: Per-topic recentIds — block last 4 questions per topic
-        const topicRecentIds = (s.recentIds && s.recentIds[key]) || [];
-        const recentIds = {
-          ...(s.recentIds || {}),
-          [key]: [questionId, ...topicRecentIds].slice(0, 4),
-        };
+        // Track answered questions
+        // Correctly answered → never show again
+        // Wrong answered → store topic answer count for retry threshold
+        const answeredCorrectly = isCorrect
+          ? { ...s.answeredCorrectly, [questionId]: true }
+          : s.answeredCorrectly;
 
-        // FIX 2: Topic cooldown — track last 3 topics served
-        const recentTopics = [key, ...(s.recentTopics || [])].slice(0, 3);
+        const answeredWrongly = !isCorrect
+          ? { ...s.answeredWrongly, [questionId]: (s.topicRecords[key]?.answered || 0) }
+          : s.answeredWrongly;
 
         const activeSession = s.activeSession ? {
           ...s.activeSession,
@@ -210,11 +209,11 @@ export const useStore = create(
         } : null;
 
         set({
-          topicRecords:  { ...s.topicRecords, [key]: updated },
+          topicRecords:      { ...s.topicRecords, [key]: updated },
           guestCounts,
           activeSession,
-          recentIds,
-          recentTopics,
+          answeredCorrectly,
+          answeredWrongly,
         });
       },
 
@@ -305,8 +304,8 @@ export const useStore = create(
         topicRecords:   s.topicRecords,
         sessionHistory: s.sessionHistory,
         lastSession:    s.lastSession,
-        recentIds:      s.recentIds,
-        recentTopics:   s.recentTopics,
+        answeredCorrectly: s.answeredCorrectly,
+        answeredWrongly:   s.answeredWrongly,
       }),
     }
   )
