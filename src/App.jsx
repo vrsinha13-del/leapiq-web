@@ -348,7 +348,7 @@ function TrialExpiredScreen({ setScreen, goHome }) {
 
 // ─── PRACTICE ──────────────────────────────────────────────────────────────
 function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
-  const { topicRecords, sessionHistory, isGuestLimited, guestStatus, recordAnswer, questionsCache, recentIds: storeRecentIds, recentTopics: storeRecentTopics, isTrialExpired } = useStore();
+  const { topicRecords, sessionHistory, isGuestLimited, guestStatus, recordAnswer, questionsCache, answeredCorrectly, answeredWrongly, isTrialExpired } = useStore();
   const allQs = (questionsCache && questionsCache[subject]?.length > 0)
     ? questionsCache[subject]
     : (QB[subject] || []);
@@ -361,10 +361,6 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
   const [timerMax,  setTimerMax]  = useState(60);
   const [qCount,    setQCount]    = useState(0);
   const timerRef = useRef(null);
-
-  // Per-topic recentIds and recent topics from store
-  const recentIds    = storeRecentIds    || {};
-  const recentTopics = storeRecentTopics || [];
 
   // Total answered for this subject (for adaptive threshold)
   const totalSubjectAnswered = Object.keys(topicRecords)
@@ -382,7 +378,7 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     if (status === 'hard') { onLoginRequired(true); return; }
     if (status === 'soft') { onLoginRequired(false); return; }
 
-    const res = selectNextQuestion(allQs, topicRecords, totalSubjectAnswered, recentIds, subject, recentTopics);
+    const res = selectNextQuestion(allQs, topicRecords, totalSubjectAnswered, answeredCorrectly, answeredWrongly, subject);
     if (!res) return;
     const { question: q } = res;
     const { shown } = getTimers(subject, q.category || '', q.difficulty || 'easy');
