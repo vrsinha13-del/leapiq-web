@@ -535,6 +535,22 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
               </div>
             </div>
             <button className="primary-btn" style={{ background:subj?.color }} onClick={loadNext}>Next Question →</button>
+            <button onClick={async () => {
+              const qId = q.id;
+              if (!qId) return;
+              try {
+                const { reportQuestion } = await import('./lib/supabase_sync');
+                await reportQuestion(qId);
+                // Also add to answeredCorrectly so it never appears again this session
+                useStore.getState().recordAnswer(subject, q.topic, String(q.question_level||'6'), q.difficulty||'easy', q.category||'', true, false, qId, q.answer, q.answer, 0);
+                showToast('Question reported — thank you! 👍', '#6b7280');
+                loadNext();
+              } catch(e) {
+                showToast('Could not report — try again', '#dc2626');
+              }
+            }} style={{ width:'100%', padding:'8px 0', border:'none', background:'none', color:'#9ca3af', fontFamily:'inherit', fontSize:12, cursor:'pointer', marginTop:4 }}>
+              ⚠️ Report this question
+            </button>
           </>
         )}
       </div>
