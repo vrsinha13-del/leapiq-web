@@ -353,3 +353,25 @@ export async function fetchStudentByEmail(email) {
     return null;
   }
 }
+
+// ── 10. REPORT QUESTION ─────────────────────────────────────────────────────
+// Marks a question as inactive in Supabase when reported by student
+// Also prevents it from appearing again immediately via answeredCorrectly
+
+export async function reportQuestion(questionId) {
+  try {
+    const { error } = await supabase
+      .from('question_bank')
+      .update({ is_active: false })
+      .eq('id', questionId);
+
+    if (error) {
+      console.error('reportQuestion error:', error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error('reportQuestion exception:', err);
+    return { success: false, error: err.message };
+  }
+}
