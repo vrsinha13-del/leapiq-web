@@ -196,28 +196,75 @@ export async function fetchQuestions(subject) {
 }
 
 // ── 4. FETCH ALL SUBJECTS AT ONCE ──────────────────────────────────────────
-// Called on app load — prefetches all 4 subjects
+// Fetches each subject separately to avoid Supabase 1000-row default limit
 // Returns { maths: [...], reasoning: [...], english: [...], gk: [...] }
 
 export async function fetchAllQuestions() {
-  const subjects = ['Maths', 'Reasoning', 'English', 'GK'];
-  const today    = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
 
   try {
-    const { data, error } = await supabase
-      .from('question_bank')
-      .select('*')
-      .eq('is_active', true)
-      .or(`is_evergreen.eq.true,expires_at.gt.${today}`)
-      .order('id');
+    const result = { maths: [], reasoning: [], english: [], gk: [] };
 
-    if (error) {
-      console.error('Fetch all error:', error);
-      return null;
+    // Fetch each subject separately — avoids 1000 row limit
+    for (const [key, subjectName] of [['maths','Maths'],['reasoning','Reasoning'],['english','English'],['gk','GK']]) {
+      let allRows = [];
+      let from    = 0;
+      const PAGE  = 1000;
+
+      // Paginate until all rows fetched
+      while (true) {
+        const { data, error } = await supabase
+          .from('question_bank')
+          .select('*')
+          .eq('subject', subjectName)
+          .eq('is_active', true)
+          .order('id')
+          .range(from, from + PAGE - 1);
+
+        if (error) {
+          console.error(`Fetch ${subjectName} error:`, error);
+          break;
+        }
+
+        if (!data || data.length === 0) break;
+        allRows = [...allRows, ...data];
+        if (data.length < PAGE) break;  // last page
+        from += PAGE;
+      }
+
+      // Normalise
+      result[key] = allRows.map(q => ({
+        id:             q.id,
+        subject:        key,
+        question_level: String(q.question_level || '6'),
+        chapter:        q.chapter,
+        category:       q.category,
+        topic:          q.topic,
+        difficulty:     q.difficulty?.toLowerCase(),
+        q:              q.question,
+        question:       q.question,
+        opts:           [q.option_a, q.option_b, q.option_c, q.option_d],
+        option_a:       q.option_a,
+        option_b:       q.option_b,
+        option_c:       q.option_c,
+        option_d:       q.option_d,
+        ans:            q.answer,
+        answer:         q.answer,
+        exp:            q.explanation,
+        explanation:    q.explanation,
+        is_evergreen:   q.is_evergreen,
+        expires_at:     q.expires_at,
+      }));
+
+      console.log(`Leap IQ: Loaded ${result[key].length} ${subjectName} questions`);
     }
 
-    // Group by subject and normalise
-    const result = { maths: [], reasoning: [], english: [], gk: [] };
+    return result;
+  } catch (err) {
+    console.error('Fetch all exception:', err);
+    return null;
+  }
+}
 
     for (const q of data) {
       const subj = q.subject?.toLowerCase();
