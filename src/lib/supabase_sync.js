@@ -266,41 +266,6 @@ export async function fetchAllQuestions() {
   }
 }
 
-    for (const q of data) {
-      const subj = q.subject?.toLowerCase();
-      if (!result[subj]) continue;
-
-      result[subj].push({
-        id:             q.id,
-        subject:        subj,
-        question_level: String(q.question_level || '6'),
-        chapter:        q.chapter,
-        category:       q.category,
-        topic:          q.topic,
-        difficulty:     q.difficulty?.toLowerCase(),
-        q:              q.question,
-        question:       q.question,
-        opts:           [q.option_a, q.option_b, q.option_c, q.option_d],
-        option_a:       q.option_a,
-        option_b:       q.option_b,
-        option_c:       q.option_c,
-        option_d:       q.option_d,
-        ans:            q.answer,
-        answer:         q.answer,
-        exp:            q.explanation,
-        explanation:    q.explanation,
-        is_evergreen:   q.is_evergreen,
-        expires_at:     q.expires_at,
-      });
-    }
-
-    return result;
-  } catch (err) {
-    console.error('Fetch all exception:', err);
-    return null;
-  }
-}
-
 // ── 5. FETCH CITIES ─────────────────────────────────────────────────────────
 // Returns unique list of cities from schools table — dynamic, no hardcoding
 
