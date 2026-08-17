@@ -152,6 +152,7 @@ export default function App() {
       {screen === 'auth_prompt'           && <AuthPrompt           setScreen={setScreen} goHome={goHome} mandatory={false} onContinue={() => { useStore.getState().markSoftPromptSeen(activeSubject); setScreen('practice'); }} />}
       {screen === 'auth_prompt_mandatory' && <AuthPrompt           setScreen={setScreen} goHome={goHome} mandatory={true} />}
       {screen === 'trial_expired'         && <TrialExpiredScreen   setScreen={setScreen} goHome={goHome} />}
+      {screen === 'kicked_out'            && <KickedOutScreen      setScreen={setScreen} goHome={goHome} />}
       {screen === 'forgot_password'       && <ForgotPasswordScreen setScreen={setScreen} goHome={goHome} />}
       {screen === 'forgot_pin'            && <ForgotPINScreen      setScreen={setScreen} goHome={goHome} />}
       {screen === 'parent_signin'         && <SigninScreen         setScreen={setScreen} goHome={goHome} parentOnly={true} />}
@@ -307,6 +308,39 @@ function SignupDone({ setScreen, goHome }) {
   );
 }
 
+// ─── KICKED OUT ─────────────────────────────────────────────────────────────
+function KickedOutScreen({ setScreen, goHome }) {
+  return (
+    <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
+        <div style={{ fontSize:56, marginBottom:8 }}>📱</div>
+        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>
+          Signed in elsewhere
+        </div>
+        <div style={{ color:'rgba(255,255,255,0.85)', fontSize:14, lineHeight:1.6 }}>
+          Your account was signed in on another device. Only one login is allowed at a time.
+        </div>
+      </div>
+      <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18 }}>
+        <div style={{ background:'#fef3c7', borderRadius:16, padding:20, marginBottom:20, textAlign:'center' }}>
+          <div style={{ fontSize:13, fontWeight:700, color:'#92400e', marginBottom:4 }}>Your progress is saved</div>
+          <div style={{ fontSize:13, color:'#6b7280', lineHeight:1.6 }}>
+            All your answers and progress have been saved. Sign in again to continue.
+          </div>
+        </div>
+        <button style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#4338ca', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer', marginBottom:10 }}
+          onClick={() => setScreen('signin')}>
+          Sign In Again →
+        </button>
+        <button style={{ width:'100%', padding:13, border:'1.5px solid #e5e7eb', borderRadius:13, background:'#fff', color:'#374151', fontFamily:'inherit', fontWeight:700, fontSize:14, cursor:'pointer' }}
+          onClick={goHome}>
+          Go to Home
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── TRIAL EXPIRED ─────────────────────────────────────────────────────────
 function TrialExpiredScreen({ setScreen, goHome }) {
   const { user } = useStore();
@@ -377,6 +411,13 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     const status = guestStatus ? guestStatus(subject) : (isGuestLimited(subject) ? 'hard' : 'ok');
     if (status === 'hard') { onLoginRequired(true); return; }
     if (status === 'soft') { onLoginRequired(false); return; }
+
+    // Verify session every 10 questions — single login enforcement
+    if (qCount > 0 && qCount % 10 === 0 && useStore.getState().isLoggedIn) {
+      useStore.getState().verifySession().then(valid => {
+        if (!valid) setScreen('kicked_out');
+      });
+    }
 
     const res = selectNextQuestion(allQs, topicRecords, totalSubjectAnswered, answeredCorrectly, answeredWrongly, subject);
     if (!res) return;
