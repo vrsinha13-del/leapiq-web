@@ -354,7 +354,7 @@ function StudentLoginTab({ setScreen, goHome }) {
         }
       }
 
-      useStore.getState().login(foundUser);
+      await useStore.getState().login(foundUser);
       showToast(`Welcome back, ${foundUser.name?.split(' ')[0]}! 👋`, '#4338ca');
       goHome();
     } catch (err) {
@@ -452,7 +452,7 @@ function ParentLoginTab({ setScreen, goHome }) {
       }
 
       // Store found user then go to parent dashboard
-      useStore.getState().login(foundUser);
+      await useStore.getState().login(foundUser);
       if (!foundUser.parentPinChanged) { setScreen('parent_pin'); }
       else { setScreen('parent_dash'); }
     } catch(err) {
