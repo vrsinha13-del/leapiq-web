@@ -375,3 +375,49 @@ export async function reportQuestion(questionId) {
     return { success: false, error: err.message };
   }
 }
+
+// ── 11. SESSION TOKEN — Single login enforcement ─────────────────────────────
+
+// Generate and save a new session token on login
+export async function setSessionToken(studentId, token) {
+  try {
+    const { error } = await supabase
+      .from('students')
+      .update({ session_token: token })
+      .eq('id', studentId);
+    if (error) { console.error('setSessionToken error:', error); return false; }
+    return true;
+  } catch (err) {
+    console.error('setSessionToken exception:', err);
+    return false;
+  }
+}
+
+// Verify session token still matches Supabase
+// Returns true if valid, false if another device has logged in
+export async function verifySessionToken(studentId, token) {
+  try {
+    const { data, error } = await supabase
+      .from('students')
+      .select('session_token')
+      .eq('id', studentId)
+      .single();
+    if (error) { console.error('verifySessionToken error:', error); return true; } // fail open
+    return data?.session_token === token;
+  } catch (err) {
+    console.error('verifySessionToken exception:', err);
+    return true; // fail open — don't log out on network error
+  }
+}
+
+// Clear session token on logout
+export async function clearSessionToken(studentId) {
+  try {
+    await supabase
+      .from('students')
+      .update({ session_token: null })
+      .eq('id', studentId);
+  } catch (err) {
+    console.error('clearSessionToken exception:', err);
+  }
+}
