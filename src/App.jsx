@@ -93,7 +93,16 @@ export default function App() {
         console.error('Leap IQ: Question load failed:', err.message, err);
       }
     }
+
+    async function checkSession() {
+      if (isLoggedIn) {
+        const valid = await useStore.getState().verifySession();
+        if (!valid) setScreen('kicked_out');
+      }
+    }
+
     loadQuestions();
+    checkSession();
   }, []);
 
   // Trial warning — show banner when 7 days or less remaining
@@ -411,13 +420,6 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     const status = guestStatus ? guestStatus(subject) : (isGuestLimited(subject) ? 'hard' : 'ok');
     if (status === 'hard') { onLoginRequired(true); return; }
     if (status === 'soft') { onLoginRequired(false); return; }
-
-    // Verify session every 10 questions — single login enforcement
-    if (qCount > 0 && qCount % 10 === 0 && useStore.getState().isLoggedIn) {
-      useStore.getState().verifySession().then(valid => {
-        if (!valid) setScreen('kicked_out');
-      });
-    }
 
     const res = selectNextQuestion(allQs, topicRecords, totalSubjectAnswered, answeredCorrectly, answeredWrongly, subject);
     if (!res) return;
