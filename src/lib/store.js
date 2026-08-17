@@ -44,18 +44,65 @@ export const useStore = create(
       answeredCorrectly: {},
       answeredWrongly:   {},
 
-      // ── Auth ────────────────────────────────────────────────
-      login: (userData) => set({
-        user:           userData,
-        isLoggedIn:     true,
-        guestCounts:    {},
-        softPromptSeen: {},
-      }),
+      // ── Session token for single login enforcement ────────────────
+      sessionToken: null,
 
-      logout: () => set({
-        user:       null,
-        isLoggedIn: false,
-      }),
+      // ── Auth ────────────────────────────────────────────────
+      login: async (userData) => {
+        // Generate unique session token
+        const token = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36);
+
+        // Save token to Supabase if student has supabaseId
+        if (userData.supabaseId) {
+          try {
+            const { setSessionToken } = await import('./supabase_sync');
+            await setSessionToken(userData.supabaseId, token);
+          } catch(e) { console.error('setSessionToken failed:', e); }
+        }
+
+        set({
+          user:           { ...userData, sessionToken: token },
+          isLoggedIn:     true,
+          guestCounts:    {},
+          softPromptSeen: {},
+          sessionToken:   token,
+        });
+      },
+
+      logout: async () => {
+        const s = get();
+        // Clear session token from Supabase
+        if (s.user?.supabaseId) {
+          try {
+            const { clearSessionToken } = await import('./supabase_sync');
+            await clearSessionToken(s.user.supabaseId);
+          } catch(e) { console.error('clearSessionToken failed:', e); }
+        }
+        set({
+          user:         null,
+          isLoggedIn:   false,
+          sessionToken: null,
+        });
+      },
+
+      // ── Verify session still valid ────────────────────────────────
+      // Call periodically to check if another device has logged in
+      verifySession: async () => {
+        const s = get();
+        if (!s.isLoggedIn || !s.user?.supabaseId || !s.sessionToken) return true;
+        try {
+          const { verifySessionToken } = await import('./supabase_sync');
+          const valid = await verifySessionToken(s.user.supabaseId, s.sessionToken);
+          if (!valid) {
+            // Another device logged in — force logout without clearing Supabase token
+            set({ user: null, isLoggedIn: false, sessionToken: null });
+            return false;
+          }
+          return true;
+        } catch(e) {
+          return true; // fail open on network error
+        }
+      },
 
       // ── Trial helpers ─────────────────────────────────────────
       isTrialExpired: () => {
@@ -120,10 +167,23 @@ export const useStore = create(
           }
         }
 
+        // Generate session token for single login enforcement
+        const token = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36);
+        newUser.sessionToken = token;
+
+        // Save session token to Supabase
+        if (newUser.supabaseId) {
+          try {
+            const { setSessionToken } = await import('./supabase_sync');
+            await setSessionToken(newUser.supabaseId, token);
+          } catch(e) { console.error('setSessionToken on register failed:', e); }
+        }
+
         set({
-          user:        newUser,
-          isLoggedIn:  true,
-          guestCounts: {},
+          user:         newUser,
+          isLoggedIn:   true,
+          guestCounts:  {},
+          sessionToken: token,
         });
 
         return { user: newUser, pin };
@@ -306,6 +366,7 @@ export const useStore = create(
         lastSession:    s.lastSession,
         answeredCorrectly: s.answeredCorrectly,
         answeredWrongly:   s.answeredWrongly,
+        sessionToken:      s.sessionToken,
       }),
     }
   )
