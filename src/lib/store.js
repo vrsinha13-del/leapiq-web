@@ -55,9 +55,30 @@ export const useStore = create(
         // Save token to Supabase if student has supabaseId
         if (userData.supabaseId) {
           try {
-            const { setSessionToken } = await import('./supabase_sync');
+            const { setSessionToken, fetchStudentSessions } = await import('./supabase_sync');
             await setSessionToken(userData.supabaseId, token);
-          } catch(e) { console.error('setSessionToken failed:', e); }
+
+            // Fetch sessions from Supabase to rebuild sessionHistory
+            const sessions = await fetchStudentSessions(userData.supabaseId);
+            const lastSession = sessions.length > 0 ? {
+              questionsAnswered: sessions[0].questionsAnswered,
+              date:              sessions[0].date,
+              subject:           sessions[0].subject,
+            } : null;
+
+            set({
+              user:           { ...userData, sessionToken: token },
+              isLoggedIn:     true,
+              guestCounts:    {},
+              softPromptSeen: {},
+              sessionToken:   token,
+              sessionHistory: sessions,
+              lastSession:    lastSession,
+            });
+            return;
+          } catch(e) {
+            console.error('login fetch failed:', e);
+          }
         }
 
         set({
@@ -86,15 +107,21 @@ export const useStore = create(
       },
 
       // ── Verify session still valid ────────────────────────────────
-      // Call periodically to check if another device has logged in
       verifySession: async () => {
         const s = get();
-        if (!s.isLoggedIn || !s.user?.supabaseId || !s.sessionToken) return true;
+        if (!s.isLoggedIn || !s.user?.supabaseId) return true;
+
+        // If no session token — user logged in before this feature
+        // Force them to re-login to get a proper token
+        if (!s.sessionToken) {
+          set({ user: null, isLoggedIn: false, sessionToken: null });
+          return false;
+        }
+
         try {
           const { verifySessionToken } = await import('./supabase_sync');
           const valid = await verifySessionToken(s.user.supabaseId, s.sessionToken);
           if (!valid) {
-            // Another device logged in — force logout without clearing Supabase token
             set({ user: null, isLoggedIn: false, sessionToken: null });
             return false;
           }
@@ -184,6 +211,8 @@ export const useStore = create(
           isLoggedIn:   true,
           guestCounts:  {},
           sessionToken: token,
+          sessionHistory: [],
+          lastSession:    null,
         });
 
         return { user: newUser, pin };
@@ -287,9 +316,11 @@ export const useStore = create(
           s.user?.lastPracticeDate || null
         );
 
-        const durationSeconds = s.activeSession?.startedAt
+        // Cap duration at 2 hours max (prevents overnight sessions)
+        const rawDuration = s.activeSession?.startedAt
           ? Math.round((Date.now() - s.activeSession.startedAt) / 1000)
           : 0;
+        const durationSeconds = Math.min(rawDuration, 7200);
 
         const correct         = s.activeSession?.correct         || 0;
         const wrong           = s.activeSession?.wrong           || 0;
@@ -298,8 +329,8 @@ export const useStore = create(
         const hardAttempted   = s.activeSession?.hardAttempted   || 0;
         const answers         = s.activeSession?.answers         || [];
 
-        // Save to Supabase if logged in
-        if (s.isLoggedIn && s.user?.supabaseId) {
+        // Only save to Supabase if at least 1 question was answered
+        if (s.isLoggedIn && s.user?.supabaseId && questionsAnswered > 0) {
           // First save session to get session_id
           const sessionResult = await saveSession({
             studentId:        s.user.supabaseId,
