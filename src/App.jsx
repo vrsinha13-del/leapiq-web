@@ -252,13 +252,15 @@ function HomeScreen({ setScreen, startSubject }) {
                 {avg !== null && isLoggedIn ? (
                   <>
                     <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                      <span style={{ fontSize:11, color:'#6b7280' }}>{sess} sessions</span>
+                      <span style={{ fontSize:11, color:'#6b7280' }}>{sess} session{sess!==1?'s':''}</span>
                       <span style={{ fontSize:11, fontWeight:700, color:s.color }}>{avg}%</span>
                     </div>
                     <div style={{ background:'#f3f4f6', borderRadius:99, height:5 }}>
                       <div style={{ background:s.color, borderRadius:99, height:5, width:`${avg}%` }}/>
                     </div>
                   </>
+                ) : sess > 0 && isLoggedIn ? (
+                  <div style={{ fontSize:11, color:'#6b7280' }}>{sess} session{sess!==1?'s':''}</div>
                 ) : (
                   <div style={{ fontSize:11, color:'#9ca3af', fontStyle:'italic' }}>Tap to start!</div>
                 )}
