@@ -421,3 +421,40 @@ export async function clearSessionToken(studentId) {
     console.error('clearSessionToken exception:', err);
   }
 }
+
+// ── 12. FETCH STUDENT SESSIONS ───────────────────────────────────────────────
+// Fetches last 50 sessions from Supabase for a student
+// Used to rebuild sessionHistory in localStorage on login
+
+export async function fetchStudentSessions(studentId) {
+  try {
+    const { data, error } = await supabase
+      .from('session_logs')
+      .select('*')
+      .eq('student_id', studentId)
+      .gt('total_attempted', 0)  // only real sessions
+      .order('ended_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('fetchStudentSessions error:', error);
+      return [];
+    }
+
+    return (data || []).map(s => ({
+      subject:           s.subject,
+      questionsAnswered: s.total_attempted,
+      correct:           s.total_correct,
+      wrong:             s.total_wrong,
+      level:             s.question_level || '6',
+      date:              new Date(s.ended_at).getTime(),
+      easyAttempted:     s.easy_attempted   || 0,
+      mediumAttempted:   s.medium_attempted || 0,
+      hardAttempted:     s.hard_attempted   || 0,
+      durationSeconds:   s.duration_seconds || 0,
+    }));
+  } catch (err) {
+    console.error('fetchStudentSessions exception:', err);
+    return [];
+  }
+}
