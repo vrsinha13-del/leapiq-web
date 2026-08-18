@@ -185,7 +185,7 @@ function HomeScreen({ setScreen, startSubject }) {
       : "Ready to start your learning journey? Let's go! 🚀";
 
   function sessForSubj(sid) {
-    return sessionHistory.filter(h => h.subject === sid).length;
+    return sessionHistory.filter(h => (h.subject||'').toLowerCase() === sid.toLowerCase()).length;
   }
   function avgForSubj(sid) {
     const ks = Object.keys(topicRecords).filter(k => k.startsWith(sid + '_'));
@@ -243,7 +243,7 @@ function HomeScreen({ setScreen, startSubject }) {
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:11 }}>
           {SUBJECTS.map((s, i) => {
             const avg  = avgForSubj(s.id);
-            const sess = sessForSubj(s.id);
+            const sess = sessionHistory.filter(h=>(h.subject||'').toLowerCase()===s.id.toLowerCase()).length;
             return (
               <div key={s.id} className="subj-card" style={{ animationDelay:`${i * 60}ms` }} onClick={() => startSubject(s.id)}>
                 <div style={{ width:46, height:46, borderRadius:12, background:s.light, display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, marginBottom:10 }}>{s.icon}</div>
@@ -651,7 +651,7 @@ function StudentReport({ setScreen, goHome }) {
       <div style={{ padding:'10px 16px 40px', marginTop:-12 }}>
         {SUBJECTS.map(subj => {
           const sum = strengthSummary(topicRecords, subj.id);
-          const sc  = sessionHistory.filter(h => h.subject === subj.id).length;
+          const sc  = sessionHistory.filter(h => (h.subject||'').toLowerCase() === subj.id.toLowerCase()).length;
           return (
             <div key={subj.id} className="info-card" style={{ marginBottom:12 }}>
               <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:sum?12:0 }}>
@@ -743,7 +743,7 @@ function ParentDashboard({ setScreen, goHome }) {
       <div style={{ padding:'10px 16px 40px', marginTop:-12 }}>
         {SUBJECTS.map(subj => {
           const breakdown = fullTopicBreakdown(topicRecords, subj.id);
-          const sessCount = sessionHistory.filter(s => s.subject === subj.id).length;
+          const sessCount = sessionHistory.filter(s => (s.subject||'').toLowerCase() === subj.id.toLowerCase()).length;
           const scores    = breakdown.filter(t => t.score !== null).map(t => t.score);
           const oa        = scores.length ? Math.round(scores.reduce((a,b)=>a+b,0)/scores.length) : null;
           const oaColor   = oa===null?'#d1d5db':oa>=70?'#16a34a':oa>=50?'#d97706':'#dc2626';
