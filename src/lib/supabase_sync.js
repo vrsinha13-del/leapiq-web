@@ -442,7 +442,7 @@ export async function fetchStudentSessions(studentId) {
     }
 
     return (data || []).map(s => ({
-      subject:           s.subject,
+      subject:           (s.subject || '').toLowerCase(),
       questionsAnswered: s.total_attempted,
       correct:           s.total_correct,
       wrong:             s.total_wrong,
