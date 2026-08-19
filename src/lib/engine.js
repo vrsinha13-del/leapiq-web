@@ -156,9 +156,10 @@ export function topicWeight(r, totalSubjectAnswered, freshQuestionCount) {
 
   if (totalSubjectAnswered < ADAPTIVE_THRESHOLD) {
     // Coverage phase — prioritise topics with more unanswered questions
-    if (!r || r.answered === 0) return 2;    // never answered → highest
-    if (r.answered < 5)         return 1;    // few answers → normal
-    return 0.4;                              // well answered → lower
+    if (!r || r.answered === 0) return 4;    // never answered → highest priority
+    if (r.answered < 3)         return 2;    // few answers → high priority
+    if (r.answered < 5)         return 1;    // getting there → normal
+    return 0.3;                              // well answered → much lower
   }
 
   // Adaptive phase
