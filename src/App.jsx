@@ -72,6 +72,10 @@ export default function App() {
   const [activeSubject, setActiveSubject] = useState(null);
   const [sessionResult, setSessionResult] = useState(null);
   const { isLoggedIn, questionsCache, setQuestionsCache, trialDaysLeft } = useStore();
+  const [questionsLoaded, setQuestionsLoaded] = useState(false);
+
+  // Expose store for diagnostic access in console
+  window.__leapiq = useStore;
 
   useEffect(() => {
     async function loadQuestions() {
@@ -92,6 +96,7 @@ export default function App() {
       } catch (err) {
         console.error('Leap IQ: Question load failed:', err.message, err);
       }
+      setQuestionsLoaded(true); // always mark as loaded even on error
     }
 
     async function checkSession() {
@@ -117,6 +122,11 @@ export default function App() {
   const subj = SUBJECTS.find(s => s.id === activeSubject);
 
   function startSubject(sid) {
+    if (!questionsLoaded) {
+      // Questions still loading — wait
+      alert('Questions are still loading, please wait a moment and try again.');
+      return;
+    }
     useStore.getState().startSession(sid);
     setActiveSubject(sid);
     setScreen('practice');
@@ -151,7 +161,7 @@ export default function App() {
         </div>
       )}
 
-      {screen === 'home'                  && <HomeScreen           setScreen={setScreen} startSubject={startSubject} />}
+      {screen === 'home'                  && <HomeScreen           setScreen={setScreen} startSubject={startSubject} questionsLoaded={questionsLoaded} />}
       {screen === 'practice'              && <PracticeScreen       setScreen={setScreen} subject={activeSubject} subj={subj} onEnd={onSessionEnd} onLoginRequired={onLoginRequired} />}
       {screen === 'session_end'           && <SessionEndScreen     setScreen={setScreen} result={sessionResult} subj={subj} startSubject={startSubject} goHome={goHome} />}
       {screen === 'report'                && <StudentReport        setScreen={setScreen} goHome={goHome} />}
@@ -172,7 +182,7 @@ export default function App() {
 }
 
 // ─── HOME ──────────────────────────────────────────────────────────────────
-function HomeScreen({ setScreen, startSubject }) {
+function HomeScreen({ setScreen, startSubject, questionsLoaded }) {
   const { user, isLoggedIn, topicRecords, sessionHistory, lastSession } = useStore();
   const name       = user?.name?.split(' ')[0] || 'Superstar';
   const hasHistory = isLoggedIn && sessionHistory.length > 0;
@@ -262,7 +272,7 @@ function HomeScreen({ setScreen, startSubject }) {
                 ) : sess > 0 && isLoggedIn ? (
                   <div style={{ fontSize:11, color:'#6b7280' }}>{sess} session{sess!==1?'s':''}</div>
                 ) : (
-                  <div style={{ fontSize:11, color:'#9ca3af', fontStyle:'italic' }}>Tap to start!</div>
+                <div style={{ fontSize:11, color:'#9ca3af', fontStyle:'italic' }}>{questionsLoaded === false ? '⏳ Loading...' : 'Tap to start!'}</div>
                 )}
                 <div style={{ position:'absolute', bottom:12, right:12, width:26, height:26, borderRadius:7, background:s.light, display:'flex', alignItems:'center', justifyContent:'center', color:s.color, fontWeight:800, fontSize:13 }}>→</div>
               </div>
