@@ -67,13 +67,18 @@ export const useStore = create(
             } : null;
 
             set({
-              user:           { ...userData, sessionToken: token },
-              isLoggedIn:     true,
-              guestCounts:    {},
-              softPromptSeen: {},
-              sessionToken:   token,
-              sessionHistory: sessions,
-              lastSession:    lastSession,
+              user:              { ...userData, sessionToken: token },
+              isLoggedIn:        true,
+              guestCounts:       {},
+              softPromptSeen:    {},
+              sessionToken:      token,
+              sessionHistory:    sessions,
+              lastSession:       lastSession,
+              // Clear previous user's learning data
+              topicRecords:      {},
+              answeredCorrectly: {},
+              answeredWrongly:   {},
+              activeSession:     null,
             });
             return;
           } catch(e) {
@@ -82,11 +87,16 @@ export const useStore = create(
         }
 
         set({
-          user:           { ...userData, sessionToken: token },
-          isLoggedIn:     true,
-          guestCounts:    {},
-          softPromptSeen: {},
-          sessionToken:   token,
+          user:              { ...userData, sessionToken: token },
+          isLoggedIn:        true,
+          guestCounts:       {},
+          softPromptSeen:    {},
+          sessionToken:      token,
+          // Clear previous user's learning data
+          topicRecords:      {},
+          answeredCorrectly: {},
+          answeredWrongly:   {},
+          activeSession:     null,
         });
       },
 
