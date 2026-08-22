@@ -158,8 +158,8 @@ export function topicWeight(r, totalSubjectAnswered, freshQuestionCount) {
     // Never seen → highest priority
     if (!r || r.answered === 0) return 4;
 
-    // At Medium or Hard level — keep normal weight so student progresses
-    if (r.diffLevel > 0) return 1.5;
+    // At Medium or Hard level — keep higher weight so student progresses
+    if (r.diffLevel > 0) return 2.5;
 
     // At Easy level — reduce weight as more answered
     if (r.answered < 3)  return 2;
@@ -255,15 +255,16 @@ export function checkTopicLevelUnlock(topicRecords, subject, topic, category) {
 // ─── SELECT NEXT QUESTION ──────────────────────────────────────────────────
 // answeredCorrectly: { questionId: true }  — never show again
 // answeredWrongly:   { questionId: count } — show again after WRONG_RETRY_AFTER
-//                                            other questions in same topic
+// recentTopics:      [topicKey, ...] — last N topics served, for rotation
 export function selectNextQuestion(
   allQuestions, topicRecords, totalSubjectAnswered,
-  answeredCorrectly, answeredWrongly, subject
+  answeredCorrectly, answeredWrongly, subject, recentTopics
 ) {
   if (!allQuestions.length) return null;
 
   const aC = answeredCorrectly || {};
   const aW = answeredWrongly   || {};
+  const rt = recentTopics      || [];  // last 5 topic keys served
 
   const today    = new Date().toISOString().split('T')[0];
   const eligible = allQuestions.filter(q => {
@@ -319,27 +320,18 @@ export function selectNextQuestion(
     const diffKey   = ['easy', 'medium', 'hard'][diffLevel];
     const allDiff   = difficulties[diffKey] || [];
 
-    // ── Core filtering logic ─────────────────────────────────────
-    // 1. Never show correctly answered questions
-    // 2. Wrong answers: show again only after WRONG_RETRY_AFTER other answers in this topic
-    // 3. Unseen questions: always available
-
     const topicAnswered = record.answered || 0;
 
     const freshCandidates = allDiff.filter(q => {
-      if (aC[q.id]) return false;  // correctly answered — never show
-
+      if (aC[q.id]) return false;
       if (aW[q.id] !== undefined) {
-        // Wrong answer — show again only after WRONG_RETRY_AFTER questions in this topic
         const wrongCount = aW[q.id];
         const retryAfter = wrongCount + WRONG_RETRY_AFTER;
         return topicAnswered >= retryAfter;
       }
-
-      return true;  // never seen — always show
+      return true;
     });
 
-    // Fallback to easier difficulty if current level exhausted
     let candidates = freshCandidates;
     if (!candidates.length && diffLevel > 0) {
       const fallback    = ['easy', 'medium', 'hard'][diffLevel - 1];
@@ -353,20 +345,50 @@ export function selectNextQuestion(
       });
     }
 
-    // Last resort — if truly nothing available, include wrong answers regardless of retry
     if (!candidates.length) {
       candidates = allDiff.filter(q => !aC[q.id]);
     }
 
-    if (!candidates.length) continue;  // all correctly answered — skip topic
+    if (!candidates.length) continue;
 
-    // Calculate weight based on fresh question count
+    // ── TOPIC WEIGHT ──────────────────────────────────────────────
     const freshCount = candidates.length;
-    const weight     = topicWeight(record, totalSubjectAnswered, freshCount);
-    const slots      = Math.max(1, Math.round(weight * 2));
+    let weight = topicWeight(record, totalSubjectAnswered, freshCount);
+
+    // ── RECENCY PENALTY — rotation enforcement ────────────────────
+    // Topic just served (position 0) → skip entirely
+    // Topic served 1 question ago    → 10% of normal weight
+    // Topic served 2 questions ago   → 30% of normal weight
+    // Topic served 3 questions ago   → 60% of normal weight
+    // Topic served 4 questions ago   → 80% of normal weight
+    // Topic served 5+ questions ago  → full weight
+    const recentIndex = rt.indexOf(key);
+    if (recentIndex === 0) continue;            // just served — skip
+    if (recentIndex === 1) weight *= 0.1;       // 1 ago — almost skip
+    if (recentIndex === 2) weight *= 0.3;       // 2 ago — heavily reduced
+    if (recentIndex === 3) weight *= 0.6;       // 3 ago — reduced
+    if (recentIndex === 4) weight *= 0.8;       // 4 ago — slightly reduced
+    // recentIndex === -1 (not recent) or >= 5 → full weight
+
+    const slots = Math.max(1, Math.round(weight * 2));
 
     for (let i = 0; i < slots; i++) {
       pool.push({ topic, category, candidates, record, key, chosenLevel, isMast });
+    }
+  }
+
+  // Fallback — if all topics are in recent window (very few topics), ignore recency
+  if (!pool.length) {
+    for (const [topic, levels] of Object.entries(byTopic)) {
+      const category  = levels.category || '';
+      const key       = `${subject}_6_${topic}`;
+      const record    = topicRecords[key] || emptyTopicRecord();
+      const diffLevel = record.diffLevel || 0;
+      const diffKey   = ['easy', 'medium', 'hard'][diffLevel];
+      const candidates = (levels['6'] || {})[diffKey]?.filter(q => !aC[q.id]) || [];
+      if (candidates.length) {
+        pool.push({ topic, category, candidates, record, key, chosenLevel: '6', isMast: false });
+      }
     }
   }
 
