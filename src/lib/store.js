@@ -39,12 +39,14 @@ export const useStore = create(
       activeSession:  null,
 
       // ── Question answer tracking ──────────────────────────────────
-      // answeredCorrectly: { questionId: true } — never show again
-      // answeredWrongly: { questionId: topicAnsweredCount } — retry after 10
       answeredCorrectly: {},
       answeredWrongly:   {},
 
-      // ── Session token for single login enforcement ────────────────
+      // ── Recent topics — last 5 topic keys served ──────────────────
+      // Used for rotation enforcement — recency penalty applied
+      recentTopics: [],
+
+      // ── Session token ─────────────────────────────────────────────
       sessionToken: null,
 
       // ── Auth ────────────────────────────────────────────────
@@ -79,6 +81,7 @@ export const useStore = create(
               answeredCorrectly: {},
               answeredWrongly:   {},
               activeSession:     null,
+              recentTopics:      [],
             });
             return;
           } catch(e) {
@@ -102,7 +105,6 @@ export const useStore = create(
 
       logout: async () => {
         const s = get();
-        // Clear session token from Supabase
         if (s.user?.supabaseId) {
           try {
             const { clearSessionToken } = await import('./supabase_sync');
@@ -110,9 +112,17 @@ export const useStore = create(
           } catch(e) { console.error('clearSessionToken failed:', e); }
         }
         set({
-          user:         null,
-          isLoggedIn:   false,
-          sessionToken: null,
+          user:              null,
+          isLoggedIn:        false,
+          sessionToken:      null,
+          topicRecords:      {},
+          answeredCorrectly: {},
+          answeredWrongly:   {},
+          sessionHistory:    [],
+          lastSession:       null,
+          activeSession:     null,
+          guestCounts:       {},
+          softPromptSeen:    {},
         });
       },
 
@@ -284,8 +294,6 @@ export const useStore = create(
         } : null;
 
         // Track answered questions
-        // Correctly answered → never show again
-        // Wrong answered → store topic answer count for retry threshold
         const answeredCorrectly = isCorrect
           ? { ...s.answeredCorrectly, [questionId]: true }
           : s.answeredCorrectly;
@@ -293,6 +301,9 @@ export const useStore = create(
         const answeredWrongly = !isCorrect
           ? { ...s.answeredWrongly, [questionId]: (s.topicRecords[key]?.answered || 0) }
           : s.answeredWrongly;
+
+        // Track last 5 topics served for rotation enforcement
+        const recentTopics = [key, ...(s.recentTopics || [])].slice(0, 5);
 
         const activeSession = s.activeSession ? {
           ...s.activeSession,
@@ -313,6 +324,7 @@ export const useStore = create(
           activeSession,
           answeredCorrectly,
           answeredWrongly,
+          recentTopics,
         });
       },
 
@@ -408,6 +420,7 @@ export const useStore = create(
         answeredCorrectly: s.answeredCorrectly,
         answeredWrongly:   s.answeredWrongly,
         sessionToken:      s.sessionToken,
+        recentTopics:      s.recentTopics,
       }),
     }
   )
