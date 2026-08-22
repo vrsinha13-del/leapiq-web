@@ -403,7 +403,7 @@ function TrialExpiredScreen({ setScreen, goHome }) {
 
 // ─── PRACTICE ──────────────────────────────────────────────────────────────
 function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
-  const { topicRecords, sessionHistory, isGuestLimited, guestStatus, recordAnswer, questionsCache, answeredCorrectly, answeredWrongly, isTrialExpired } = useStore();
+  const { topicRecords, sessionHistory, isGuestLimited, guestStatus, recordAnswer, questionsCache, answeredCorrectly, answeredWrongly, recentTopics, isTrialExpired } = useStore();
   const allQs = (questionsCache && questionsCache[subject]?.length > 0)
     ? questionsCache[subject]
     : (QB[subject] || []);
@@ -433,7 +433,7 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
     if (status === 'hard') { onLoginRequired(true); return; }
     if (status === 'soft') { onLoginRequired(false); return; }
 
-    const res = selectNextQuestion(allQs, topicRecords, totalSubjectAnswered, answeredCorrectly, answeredWrongly, subject);
+    const res = selectNextQuestion(allQs, topicRecords, totalSubjectAnswered, answeredCorrectly, answeredWrongly, subject, recentTopics || []);
     if (!res) return;
     const { question: q } = res;
     const { shown } = getTimers(subject, q.category || '', q.difficulty || 'easy');
