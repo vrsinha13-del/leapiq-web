@@ -18,7 +18,7 @@ export const SUBJECT_CONFIG = {
       hard:   { minQ: 30,  minAcc: 80, minDays: 7 },
     },
     promote: { easy: 5, medium: 3 },
-    demote:  { unmastered: 2, mastered: 1 },
+    demote:  { unmastered: 3, mastered: 2 },
   },
   reasoning: {
     timers:       { easy: 90,  medium: 150, hard: 300 },
@@ -30,7 +30,7 @@ export const SUBJECT_CONFIG = {
       hard:   { minQ: 30,  minAcc: 80, minDays: 7 },
     },
     promote: { easy: 5, medium: 3 },
-    demote:  { unmastered: 2, mastered: 1 },
+    demote:  { unmastered: 3, mastered: 2 },
   },
   english: {
     timers: {
@@ -59,7 +59,7 @@ export const SUBJECT_CONFIG = {
       },
     },
     promote: { easy: 5, medium: 3 },
-    demote:  { unmastered: 2, mastered: 1 },
+    demote:  { unmastered: 3, mastered: 2 },
   },
   gk: {
     timers:       { easy: 30, medium: 45, hard: 60 },
@@ -71,7 +71,7 @@ export const SUBJECT_CONFIG = {
       hard:   { minQ: 25,  minAcc: 75, minDays: 5 },
     },
     promote: { easy: 5, medium: 3 },
-    demote:  { unmastered: 2, mastered: 1 },
+    demote:  { unmastered: 3, mastered: 2 },
   },
 };
 
@@ -155,11 +155,16 @@ export function topicWeight(r, totalSubjectAnswered, freshQuestionCount) {
   if (freshQuestionCount === 0) return 0.1;
 
   if (totalSubjectAnswered < ADAPTIVE_THRESHOLD) {
-    // Coverage phase — prioritise topics with more unanswered questions
-    if (!r || r.answered === 0) return 4;    // never answered → highest priority
-    if (r.answered < 3)         return 2;    // few answers → high priority
-    if (r.answered < 5)         return 1;    // getting there → normal
-    return 0.3;                              // well answered → much lower
+    // Never seen → highest priority
+    if (!r || r.answered === 0) return 4;
+
+    // At Medium or Hard level — keep normal weight so student progresses
+    if (r.diffLevel > 0) return 1.5;
+
+    // At Easy level — reduce weight as more answered
+    if (r.answered < 3)  return 2;
+    if (r.answered < 6)  return 1;
+    return 0.5;
   }
 
   // Adaptive phase
