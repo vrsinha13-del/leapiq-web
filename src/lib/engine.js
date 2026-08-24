@@ -17,7 +17,7 @@ export const SUBJECT_CONFIG = {
       medium: { minQ: 60,  minAcc: 85, minDays: 7 },
       hard:   { minQ: 30,  minAcc: 80, minDays: 7 },
     },
-    promote: { easy: 5, medium: 3 },
+    promote: { easy: 3, medium: 2 },
     demote:  { unmastered: 3, mastered: 2 },
   },
   reasoning: {
@@ -29,7 +29,7 @@ export const SUBJECT_CONFIG = {
       medium: { minQ: 60,  minAcc: 85, minDays: 7 },
       hard:   { minQ: 30,  minAcc: 80, minDays: 7 },
     },
-    promote: { easy: 5, medium: 3 },
+    promote: { easy: 3, medium: 2 },
     demote:  { unmastered: 3, mastered: 2 },
   },
   english: {
@@ -58,7 +58,7 @@ export const SUBJECT_CONFIG = {
         hard:   { minQ: 30,  minAcc: 75, minDays: 7 },
       },
     },
-    promote: { easy: 5, medium: 3 },
+    promote: { easy: 3, medium: 2 },
     demote:  { unmastered: 3, mastered: 2 },
   },
   gk: {
@@ -70,7 +70,7 @@ export const SUBJECT_CONFIG = {
       medium: { minQ: 50,  minAcc: 80, minDays: 5 },
       hard:   { minQ: 25,  minAcc: 75, minDays: 5 },
     },
-    promote: { easy: 5, medium: 3 },
+    promote: { easy: 3, medium: 2 },
     demote:  { unmastered: 3, mastered: 2 },
   },
 };
