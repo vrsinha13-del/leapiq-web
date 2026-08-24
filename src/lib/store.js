@@ -302,8 +302,8 @@ export const useStore = create(
           ? { ...s.answeredWrongly, [questionId]: (s.topicRecords[key]?.answered || 0) }
           : s.answeredWrongly;
 
-        // Track last 5 topics served for rotation enforcement
-        const recentTopics = [key, ...(s.recentTopics || [])].slice(0, 5);
+        // Track last 5 topics — deduplicated to prevent back-to-back repeats
+        const recentTopics = [key, ...(s.recentTopics || []).filter(function(k){ return k !== key; })].slice(0, 5);
 
         const activeSession = s.activeSession ? {
           ...s.activeSession,
