@@ -75,26 +75,26 @@ export default function App() {
   const [questionsLoaded, setQuestionsLoaded] = useState(false);
 
   // Expose store for diagnostic access in console
-  window.__leapiq = useStore;
+  window.__primr = useStore;
 
   useEffect(() => {
     async function loadQuestions() {
-      console.log('Leap IQ: Loading questions from Supabase...');
+      console.log('PRIMR: Loading questions from Supabase...');
       try {
         const { fetchAllQuestions } = await import('./lib/supabase_sync');
-        console.log('Leap IQ: supabase_sync imported OK');
+        console.log('PRIMR: supabase_sync imported OK');
         const cache = await fetchAllQuestions();
-        console.log('Leap IQ: fetchAllQuestions result:', cache);
+        console.log('PRIMR: fetchAllQuestions result:', cache);
         if (cache) {
           setQuestionsCache(cache);
-          console.log('Leap IQ: Questions loaded —',
+          console.log('PRIMR: Questions loaded —',
             Object.entries(cache).map(([k,v]) => `${k}:${v.length}`).join(', ')
           );
         } else {
-          console.warn('Leap IQ: fetchAllQuestions returned null — check Supabase');
+          console.warn('PRIMR: fetchAllQuestions returned null — check Supabase');
         }
       } catch (err) {
-        console.error('Leap IQ: Question load failed:', err.message, err);
+        console.error('PRIMR: Question load failed:', err.message, err);
       }
       setQuestionsLoaded(true); // always mark as loaded even on error
     }
@@ -213,7 +213,7 @@ function HomeScreen({ setScreen, startSubject, questionsLoaded }) {
         <div style={{ position:'absolute', top:-60, right:-60, width:220, height:220, borderRadius:'50%', background:'rgba(255,255,255,0.04)', pointerEvents:'none' }}/>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'18px' }}>
           <div>
-            <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff' }}>🚀 Leap IQ</div>
+            <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff' }}>📊 PRIMR</div>
             <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', marginTop:1 }}>Adaptive Learning · Grades 5–10</div>
           </div>
           <div style={{ display:'flex', gap:8 }}>
@@ -385,7 +385,7 @@ function TrialExpiredScreen({ setScreen, goHome }) {
           </div>
         </div>
         <div style={{ background:'linear-gradient(135deg,#4338ca,#7c3aed)', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:'rgba(255,255,255,0.8)', marginBottom:4 }}>Leap IQ Premium</div>
+          <div style={{ fontSize:13, fontWeight:700, color:'rgba(255,255,255,0.8)', marginBottom:4 }}>PRIMR Premium</div>
           <div style={{ fontFamily:"'Syne',system-ui", fontSize:28, fontWeight:800, color:'#fff', marginBottom:4 }}>₹299 / month</div>
           <div style={{ fontSize:12, color:'rgba(255,255,255,0.75)', marginBottom:16 }}>Unlimited questions · All subjects · Progress tracking</div>
           <button style={{ width:'100%', padding:14, border:'none', borderRadius:12, background:'#fff', color:'#4338ca', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}>
