@@ -52,7 +52,7 @@ export function AuthPrompt({ setScreen, goHome, mandatory = false, onContinue })
 
         {/* New user */}
         <div style={{ background:'#f0fdf4', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
-          <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:4 }}>New to Leap IQ?</div>
+          <div style={{ fontSize:13, fontWeight:700, color:'#166534', marginBottom:4 }}>New to PRIMR?</div>
           <div style={{ fontSize:12, color:'#6b7280', marginBottom:4 }}>Free for 1 month · No credit card needed</div>
           <div style={{ fontSize:12, color:'#166534', fontWeight:600, marginBottom:14 }}>✓ Save progress ✓ All subjects ✓ Parent dashboard</div>
           <button style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#166534', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}
@@ -171,7 +171,7 @@ export function SignupScreen({ setScreen, goHome }) {
             onClick={goHome}>← Back</button>
         </div>
         <div style={{ fontSize:48, marginBottom:8 }}>🚀</div>
-        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Join Leap IQ</div>
+        <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>Join PRIMR</div>
         <div style={{ color:'rgba(255,255,255,0.75)', fontSize:14 }}>Free to start · Track your progress</div>
       </div>
       <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18, overflowY:'auto' }}>
@@ -505,13 +505,13 @@ function SchoolLoginTab({ setScreen, goHome }) {
 
   function handleLogin(e) {
     e.preventDefault();
-    setErr('School admin login coming soon. Please contact support@leapiq.app');
+    setErr('School admin login coming soon. Please contact support@primr.app');
   }
 
   return (
     <div style={{ padding:'24px 20px' }}>
       <div style={{ background:'#fef3c7', borderRadius:12, padding:'12px 14px', marginBottom:20, fontSize:12, color:'#92400e', fontWeight:600, lineHeight:1.5 }}>
-        🏫 School admin accounts are created by Leap IQ. Contact us at support@leapiq.app to set up your school account.
+        🏫 School admin accounts are created by PRIMR. Contact us at support@primr.app to set up your school account.
       </div>
       <form onSubmit={handleLogin} style={{ display:'flex', flexDirection:'column' }}>
         <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>School Admin Email</label>
