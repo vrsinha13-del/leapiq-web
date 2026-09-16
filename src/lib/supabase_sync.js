@@ -1,5 +1,5 @@
 // src/lib/supabase_sync.js
-// Handles all Supabase read/write operations for Leap IQ
+// Handles all Supabase read/write operations for PRIMR
 // 1. Registration — save student to students table
 // 2. Session end — save to session_logs table
 // 3. Question fetch — load from question_bank table
@@ -256,7 +256,7 @@ export async function fetchAllQuestions() {
         expires_at:     q.expires_at,
       }));
 
-      console.log(`Leap IQ: Loaded ${result[key].length} ${subjectName} questions`);
+      console.log(`PRIMR: Loaded ${result[key].length} ${subjectName} questions`);
     }
 
     return result;
