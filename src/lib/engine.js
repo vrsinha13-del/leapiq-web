@@ -1,5 +1,5 @@
 // src/lib/engine.js
-// Leap IQ — Complete Adaptive Engine v3
+// PRIMR — Complete Adaptive Engine v3
 // Key design:
 // - Correctly answered questions are NEVER shown again
 // - Incorrectly answered questions shown again after 10 other questions in same topic
