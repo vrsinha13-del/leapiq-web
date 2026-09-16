@@ -1,4 +1,4 @@
-// Leap IQ — Complete Question Bank v1
+// PRIMR — Complete Question Bank v1
 // 200+ questions across 4 subjects, multiple topics, 3 difficulty levels
 // Format: { id, topic, difficulty, q, opts, ans, exp }
 
