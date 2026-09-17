@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 import {
   emptyTopicRecord,
   updateRecord,
+  getTimers,
   guestLimitReachedForSubject,
   guestLimitStatus,
   calculateStreak,
@@ -11,11 +12,45 @@ import {
 import { registerStudent, saveSession, saveAnswers, linkStudentToSchool } from './supabase_sync';
 
 export const SUBJECTS = [
-  { id:'maths',     label:'Mathematics',       short:'Maths',     icon:'∑',  color:'#4F46E5', light:'#EEF2FF' },
-  { id:'reasoning', label:'Reasoning',         short:'Reasoning', icon:'⚡', color:'#D97706', light:'#FFFBEB' },
-  { id:'english',   label:'English',           short:'English',   icon:'Aa', color:'#0891B2', light:'#ECFEFF' },
-  { id:'gk',        label:'General Knowledge', short:'GK',        icon:'🌍', color:'#059669', light:'#ECFDF5' },
+  { id:'maths',     label:'Mathematics',       short:'Maths',     icon:'∑',  color:'#F2A93B', light:'#FCE7C2' },
+  { id:'reasoning', label:'Reasoning',         short:'Reasoning', icon:'⚡', color:'#F0654B', light:'#FBD9CE' },
+  { id:'english',   label:'English',           short:'English',   icon:'Aa', color:'#16A38A', light:'#C5EFE4' },
+  { id:'gk',        label:'General Knowledge', short:'GK',        icon:'🌍', color:'#7C4DFF', light:'#E1D6FF' },
 ];
+
+// Replays a student's full answer history (oldest to newest) through the
+// exact same updateRecord() logic the live engine uses during practice, so
+// topicRecords — difficulty level, mastery progress, answered/correct counts,
+// days practiced — is rebuilt on login instead of resetting to empty. This is
+// what makes "already mastered a level" survive logging out, a token refresh,
+// or switching devices.
+function rebuildTopicRecordsFromRows(rows) {
+  const records = {};
+  for (const row of rows) {
+    if (!row.subject || !row.topic) continue;
+    const level = String(row.question_level || '6');
+    const key   = `${row.subject}_${level}_${row.topic}`;
+
+    // category isn't stored on student_answers. It only changes timing and
+    // mastery thresholds for English (comprehension vs standard topics), so
+    // it's inferred here from the topic name — comprehension topics are
+    // named "... Passages ..." by the generator. This is an approximation
+    // used only for the isLate/speed-penalty reconstruction below.
+    const category = row.subject === 'english' && /passage/i.test(row.topic)
+      ? 'comprehension'
+      : '';
+
+    const { mastery: masteryTime } = getTimers(row.subject, category, row.difficulty);
+    const isLate = masteryTime !== null && (row.time_taken_sec || 0) > masteryTime;
+    const today  = row.answered_at ? new Date(row.answered_at).toDateString() : null;
+
+    records[key] = updateRecord(
+      records[key] || emptyTopicRecord(),
+      !!row.is_correct, isLate, row.difficulty, today, row.subject, category
+    );
+  }
+  return records;
+}
 
 export const useStore = create(
   persist(
@@ -57,11 +92,14 @@ export const useStore = create(
         // Save token to Supabase if student has supabaseId
         if (userData.supabaseId) {
           try {
-            const { setSessionToken, fetchStudentSessions } = await import('./supabase_sync');
+            const { setSessionToken, fetchStudentSessions, fetchAnsweredHistory } = await import('./supabase_sync');
             await setSessionToken(userData.supabaseId, token);
 
-            // Fetch sessions from Supabase to rebuild sessionHistory
-            const sessions = await fetchStudentSessions(userData.supabaseId);
+            // Fetch sessions AND the full answered-question history in parallel
+            const [sessions, answeredHistory] = await Promise.all([
+              fetchStudentSessions(userData.supabaseId),
+              fetchAnsweredHistory(userData.supabaseId),
+            ]);
             const lastSession = sessions.length > 0 ? {
               questionsAnswered: sessions[0].questionsAnswered,
               date:              sessions[0].date,
@@ -76,10 +114,12 @@ export const useStore = create(
               sessionToken:      token,
               sessionHistory:    sessions,
               lastSession:       lastSession,
-              // Clear previous user's learning data
-              topicRecords:      {},
-              answeredCorrectly: {},
-              answeredWrongly:   {},
+              // Rebuild topic difficulty/mastery AND question-level history
+              // from Supabase — a login no longer wipes progress, only the
+              // in-memory session state.
+              topicRecords:      rebuildTopicRecordsFromRows(answeredHistory.rows),
+              answeredCorrectly: answeredHistory.answeredCorrectly,
+              answeredWrongly:   answeredHistory.answeredWrongly,
               activeSession:     null,
               recentTopics:      [],
             });
