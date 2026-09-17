@@ -139,6 +139,69 @@ export async function saveAnswers(studentId, sessionId, answers) {
   }
 }
 
+// ── 3b. FETCH ANSWERED QUESTION HISTORY ─────────────────────────────────────
+// Rebuilds answeredCorrectly / answeredWrongly from the full student_answers
+// history, and returns the raw rows so the caller (store.js) can also replay
+// them through updateRecord() to rebuild topicRecords — meaning difficulty
+// level and mastery status survive a login, not just question-level dedup.
+// Called on login. Without this, all local trackers reset to {} on every
+// login and Supabase's saved answer history was never read back, so students
+// could be served already-answered questions AND get dropped back to Easy
+// difficulty even after mastering a topic.
+// Paginated to avoid Supabase's 1000-row default limit for active students.
+
+export async function fetchAnsweredHistory(studentId) {
+  const result = { answeredCorrectly: {}, answeredWrongly: {}, rows: [] };
+  if (!studentId) return result;
+
+  try {
+    let allRows = [];
+    let from    = 0;
+    const PAGE  = 1000;
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('student_answers')
+        .select('question_id, subject, topic, difficulty, question_level, is_correct, time_taken_sec, answered_at')
+        .eq('student_id', studentId)
+        .order('answered_at', { ascending: true })
+        .range(from, from + PAGE - 1);
+
+      if (error) {
+        console.error('fetchAnsweredHistory error:', error);
+        break;
+      }
+
+      if (!data || data.length === 0) break;
+      allRows = [...allRows, ...data];
+      if (data.length < PAGE) break;  // last page
+      from += PAGE;
+    }
+
+    result.rows = allRows;
+
+    // Process oldest-to-newest so a later correct attempt always overrides
+    // an earlier wrong one for the same question.
+    for (const row of allRows) {
+      if (!row.question_id) continue;
+      if (row.is_correct) {
+        result.answeredCorrectly[row.question_id] = true;
+        delete result.answeredWrongly[row.question_id];
+      } else if (!result.answeredCorrectly[row.question_id]) {
+        // Baseline 0: eligible for retry once WRONG_RETRY_AFTER more
+        // questions are answered in that topic in THIS new session, since
+        // topicRecords' per-topic counters also reset fresh on login.
+        result.answeredWrongly[row.question_id] = 0;
+      }
+    }
+
+    return result;
+  } catch (err) {
+    console.error('fetchAnsweredHistory exception:', err);
+    return result;
+  }
+}
+
 // ── 3. QUESTION FETCH ──────────────────────────────────────────────────────
 // Called on app load or when subject is selected
 // Loads questions from question_bank table
