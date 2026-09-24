@@ -578,3 +578,188 @@ export function guestLimitStatus(guestCounts, subject) {
 export function guestLimitReachedForSubject(guestCounts, subject) {
   return guestLimitStatus(guestCounts, subject) === 'hard';
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// REWARDS SYSTEM — Buddies, Weekly/Monthly Badges, Tournament
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Design (locked spec):
+// - 3 metrics scored weekly per subject: Streak (days practiced), Accuracy,
+//   Question Volume — each scored 2-5 stars.
+// - The 3 scores sum to 6-15 -> Weekly Badge (3/4/5 stars) -> shown to the
+//   student as a Buddy evolution stage (1/2/3), NOT as a number.
+// - A month is always treated as exactly 4 "weeks" by day-of-month, so the
+//   live weekly buddy and the monthly rollup always agree with each other:
+//     Week 1: days 1-7   Week 2: days 8-14
+//     Week 3: days 15-21 Week 4: days 22-end (absorbs any extra days)
+//   NOTE: this is a day-of-month quartile, not a Mon-Sun calendar week —
+//   chosen so "4 weeks per month" always divides evenly per the spec
+//   ("keep 4 weeks only, extend first or last week"). Flag for adjustment
+//   if true Mon-Sun weeks were intended instead.
+// - Monthly total = sum of that month's 4 Weekly Badge star values (12-20)
+//   -> shown as a Monthly Title (Tier 1/2/3), NOT as a number.
+// - Tournament unlocks at monthly total >= 14 (Tier 2 or 3).
+// - Every student starts at Stage 1 / Tier 1 the moment they answer their
+//   first question in a subject — nothing is ever fully locked, only
+//   "not yet leveled up further" (later stages render greyed out in the UI).
+
+export const SUBJECT_REWARDS = {
+  maths: {
+    buddy: ['Cub', 'Yearling', 'Bear'],
+    icon:  ['🐻', '🐻', '🐻'],
+    title: ['Solver', 'Cruncher', 'Mathlete'],
+  },
+  english: {
+    buddy: ['Caterpillar', 'Cocoon', 'Butterfly'],
+    icon:  ['🐛', '🐛', '🦋'],
+    title: ['Reader', 'Wordsmith', 'Author'],
+  },
+  reasoning: {
+    buddy: ['Kit', 'Pup', 'Fox'],
+    icon:  ['🦊', '🦊', '🦊'],
+    title: ['Thinker', 'Analyst', 'Cracker'],
+  },
+  gk: {
+    buddy: ['Egg', 'Hatchling', 'Frog'],
+    icon:  ['🥚', '🐣', '🐸'],
+    title: ['Quizzer', 'Whizkid', 'Wizard'],
+  },
+};
+
+// ── Star thresholds (per locked spec) ───────────────────────────────────────
+function starsForStreak(days) {
+  if (days >= 7) return 5;
+  if (days >= 5) return 4;
+  if (days >= 3) return 3;
+  return 2;
+}
+function starsForAccuracy(pct) {
+  if (pct >= 90) return 5;
+  if (pct >= 70) return 4;
+  if (pct >= 50) return 3;
+  return 2;
+}
+function starsForVolume(count) {
+  if (count > 70) return 5;
+  if (count > 50) return 4;
+  if (count > 30) return 3;
+  return 2;
+}
+
+// metric-star sum (6-15) -> weekly badge stars (3/4/5)
+function weeklyBadgeStars(metricStarSum) {
+  if (metricStarSum >= 14) return 5;
+  if (metricStarSum >= 11) return 4;
+  return 3;
+}
+export function buddyStageFromWeeklyStars(weeklyStars) {
+  return Math.max(1, weeklyStars - 2); // 3->1, 4->2, 5->3
+}
+export function monthlyTitleTier(monthlyTotal) {
+  if (monthlyTotal >= 16) return 3;
+  if (monthlyTotal >= 14) return 2;
+  return 1; // 12-13
+}
+export function isTournamentQualified(monthlyTotal) {
+  return monthlyTotal >= 14;
+}
+
+export function monthWeekIndex(date) {
+  const day = date.getDate();
+  if (day <= 7)  return 0;
+  if (day <= 14) return 1;
+  if (day <= 21) return 2;
+  return 3;
+}
+function startOfMonthWeek(date, weekIdx) {
+  const y = date.getFullYear(), m = date.getMonth();
+  return new Date(y, m, [1, 8, 15, 22][weekIdx]);
+}
+function endOfMonthWeek(date, weekIdx) {
+  const y = date.getFullYear(), m = date.getMonth();
+  if (weekIdx < 3) return new Date(y, m, [7, 14, 21][weekIdx], 23, 59, 59);
+  return new Date(y, m + 1, 0, 23, 59, 59); // last calendar day of the month
+}
+
+function computeSubjectReward(rows, now) {
+  const hasAnyAnswer = rows.length > 0;
+  const curWeekIdx    = monthWeekIndex(now);
+  const weekStart     = startOfMonthWeek(now, curWeekIdx);
+  const weekEnd       = endOfMonthWeek(now, curWeekIdx);
+
+  const thisWeekRows  = rows.filter(r => {
+    const d = new Date(r.answered_at);
+    return d >= weekStart && d <= weekEnd;
+  });
+  const daysThisWeek     = new Set(thisWeekRows.map(r => new Date(r.answered_at).toDateString())).size;
+  const correctThisWeek  = thisWeekRows.filter(r => r.is_correct).length;
+  const accuracyThisWeek = thisWeekRows.length > 0 ? Math.round((correctThisWeek / thisWeekRows.length) * 100) : 0;
+  const volumeThisWeek   = thisWeekRows.length;
+
+  const streakStars   = starsForStreak(daysThisWeek);
+  const accuracyStars = starsForAccuracy(accuracyThisWeek);
+  const volumeStars   = starsForVolume(volumeThisWeek);
+  const metricStarSum = streakStars + accuracyStars + volumeStars;
+  const weeklyStars   = thisWeekRows.length > 0 ? weeklyBadgeStars(metricStarSum) : 3; // floor
+  const buddyStage    = hasAnyAnswer ? buddyStageFromWeeklyStars(weeklyStars) : 1;
+
+  // Monthly rollup: sum the 4 month-weeks' badge stars (weeks not yet
+  // reached this month don't count; weeks with 0 answers floor at 3).
+  let monthlyTotal = 0;
+  for (let w = 0; w < 4; w++) {
+    const ws = startOfMonthWeek(now, w);
+    if (ws > now) continue;
+    const we = endOfMonthWeek(now, w);
+    const wRows = rows.filter(r => { const d = new Date(r.answered_at); return d >= ws && d <= we; });
+    if (wRows.length === 0) { monthlyTotal += 3; continue; }
+    const days    = new Set(wRows.map(r => new Date(r.answered_at).toDateString())).size;
+    const correct = wRows.filter(r => r.is_correct).length;
+    const acc     = Math.round((correct / wRows.length) * 100);
+    monthlyTotal += weeklyBadgeStars(starsForStreak(days) + starsForAccuracy(acc) + starsForVolume(wRows.length));
+  }
+  const titleTier = hasAnyAnswer ? monthlyTitleTier(monthlyTotal) : 1;
+
+  return {
+    hasAnyAnswer,
+    buddyStage, weeklyStars, metricStarSum,
+    daysThisWeek, accuracyThisWeek, volumeThisWeek,
+    streakStars, accuracyStars, volumeStars,
+    monthlyTotal, titleTier,
+    tournamentQualified: isTournamentQualified(monthlyTotal),
+  };
+}
+
+// Computes reward state for every subject from the student's raw answer rows
+// (subject, is_correct, answered_at — as returned by fetchAnsweredHistory's
+// .rows). Pure function — safe to call after every answer, not just on login.
+export function computeRewardState(rows, now = new Date()) {
+  const state = {};
+  for (const subject of Object.keys(SUBJECT_REWARDS)) {
+    state[subject] = computeSubjectReward(rows.filter(r => r.subject === subject && r.answered_at), now);
+  }
+  return state;
+}
+
+// Friendly, specific nudge — "Just 2 more days and you'll unlock your Frog!"
+// Picks whichever gap (streak days / question volume) is closest to closing;
+// falls back to an accuracy nudge if streak and volume are already maxed.
+export function buddyNudgeMessage(subject, r) {
+  const rewards = SUBJECT_REWARDS[subject];
+  if (!rewards) return '';
+  if (!r || !r.hasAnyAnswer) return `Answer your first question to hatch your ${rewards.buddy[0]}!`;
+  if (r.buddyStage >= 3) return `Your ${rewards.buddy[2]} is fully grown this week! 🎉`;
+
+  const nextBuddy = rewards.buddy[r.buddyStage];
+  const streakGoal = [3, 5, 7].find(t => t > r.daysThisWeek);
+  const volumeGoal = [31, 51, 71].find(t => t > r.volumeThisWeek);
+  const daysNeeded = streakGoal ? streakGoal - r.daysThisWeek : 0;
+  const qsNeeded   = volumeGoal ? volumeGoal - r.volumeThisWeek : 0;
+
+  const candidates = [];
+  if (daysNeeded > 0) candidates.push({ n: daysNeeded, text: `${daysNeeded} more day${daysNeeded > 1 ? 's' : ''} of practice` });
+  if (qsNeeded   > 0) candidates.push({ n: qsNeeded,   text: `${qsNeeded} more question${qsNeeded > 1 ? 's' : ''}` });
+  if (candidates.length === 0) return `Keep your accuracy up to unlock your ${nextBuddy}! 🌟`;
+
+  candidates.sort((a, b) => a.n - b.n);
+  return `Just ${candidates[0].text} and you'll unlock your ${nextBuddy}! 🌟`;
+}
