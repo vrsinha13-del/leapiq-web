@@ -215,9 +215,6 @@ function HomeScreen({ setScreen, startSubject, questionsLoaded }) {
     return buddyNudgeMessage(best, rewardState[best]);
   })();
 
-  function sessForSubj(sid) {
-    return sessionHistory.filter(h => (h.subject||'').toLowerCase() === sid.toLowerCase()).length;
-  }
   function avgForSubj(sid) {
     const ks = Object.keys(topicRecords).filter(k => k.startsWith(sid + '_'));
     if (!ks.length) return null;
@@ -244,7 +241,7 @@ function HomeScreen({ setScreen, startSubject, questionsLoaded }) {
             <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', marginTop:1 }}>Adaptive Learning · Grades 5–10</div>
           </div>
           <div style={{ display:'flex', gap:8 }}>
-            <button className="ghost-btn" onClick={() => setScreen('report')}>📊 Progress</button>
+            <button className="ghost-btn" onClick={() => setScreen('report')}>🏆 My Rewards</button>
             {isLoggedIn
               ? <button className="ghost-btn" onClick={() => { useStore.getState().logout(); showToast('Signed out 👋'); }}>Sign out</button>
               : <>
@@ -272,13 +269,23 @@ function HomeScreen({ setScreen, startSubject, questionsLoaded }) {
             </div>
           )}
           <div style={{ display:'flex', gap:8 }}>
-            {SUBJECTS.map(s => (
-              <div key={s.id} style={{ flex:1, background:'rgba(255,255,255,0.1)', borderRadius:12, padding:'10px 6px', textAlign:'center' }}>
-                <div style={{ fontSize:16 }}>{s.icon}</div>
-                <div style={{ fontFamily:"'Syne',system-ui", fontSize:14, fontWeight:700, color:'#fff', marginTop:3 }}>{isLoggedIn ? sessForSubj(s.id) : '—'}</div>
-                <div style={{ fontSize:10, color:'rgba(255,255,255,0.5)' }}>{isLoggedIn ? 'sessions' : 'sign in'}</div>
-              </div>
-            ))}
+            {SUBJECTS.map(s => {
+              const rw       = rewardState?.[s.id];
+              const hasAny   = rw?.hasAnyAnswer;
+              const rewards  = SUBJECT_REWARDS[s.id];
+              const buddyIcon = hasAny ? rewards.icon[rw.buddyStage - 1] : rewards.icon[0];
+              const titleName = hasAny ? rewards.title[rw.titleTier - 1] : null;
+              return (
+                <div key={s.id} style={{ flex:1, background:'rgba(255,255,255,0.1)', borderRadius:12, padding:'10px 6px', textAlign:'center', cursor: isLoggedIn ? 'pointer' : 'default' }}
+                  onClick={() => isLoggedIn && setScreen('report')}>
+                  <div style={{ fontSize:20, opacity: isLoggedIn && hasAny ? 1 : 0.4, filter: isLoggedIn && hasAny ? 'none' : 'grayscale(100%)' }}>{buddyIcon}</div>
+                  <div style={{ fontFamily:"'Syne',system-ui", fontSize:11, fontWeight:700, color:'#fff', marginTop:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                    {isLoggedIn ? (titleName || 'Start!') : '—'}
+                  </div>
+                  <div style={{ fontSize:9, color:'rgba(255,255,255,0.5)' }}>{isLoggedIn ? s.short : 'sign in'}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
