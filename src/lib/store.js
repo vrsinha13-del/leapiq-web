@@ -5,6 +5,7 @@ import {
   emptyTopicRecord,
   updateRecord,
   getTimers,
+  computeRewardState,
   guestLimitReachedForSubject,
   guestLimitStatus,
   calculateStreak,
@@ -77,6 +78,13 @@ export const useStore = create(
       answeredCorrectly: {},
       answeredWrongly:   {},
 
+      // ── Rewards system — buddies, weekly/monthly badges ────────────
+      // answeredRows: lightweight running log of {subject, is_correct,
+      // answered_at} used to compute rewardState live, without refetching
+      // Supabase after every answer. Rebuilt from history on login.
+      answeredRows: [],
+      rewardState:  {},
+
       // ── Recent topics — last 5 topic keys served ──────────────────
       // Used for rotation enforcement — recency penalty applied
       recentTopics: [],
@@ -120,6 +128,8 @@ export const useStore = create(
               topicRecords:      rebuildTopicRecordsFromRows(answeredHistory.rows),
               answeredCorrectly: answeredHistory.answeredCorrectly,
               answeredWrongly:   answeredHistory.answeredWrongly,
+              answeredRows:      answeredHistory.rows,
+              rewardState:       computeRewardState(answeredHistory.rows),
               activeSession:     null,
               recentTopics:      [],
             });
@@ -139,16 +149,39 @@ export const useStore = create(
           topicRecords:      {},
           answeredCorrectly: {},
           answeredWrongly:   {},
+          answeredRows:      [],
+          rewardState:       {},
           activeSession:     null,
         });
       },
 
       logout: async () => {
         const s = get();
-        if (s.user?.supabaseId) {
+
+        // Flush any in-progress session before clearing state. Previously
+        // this was skipped, so a student who hit "Sign out" mid-session
+        // (rather than finishing normally) had that session's answers —
+        // including correct ones — silently discarded and never saved to
+        // Supabase. On next login, those questions looked "never answered"
+        // and were served again. Reusing endSession() here keeps this in
+        // sync with the normal end-of-session save path.
+        if (s.activeSession && s.activeSession.questionsAnswered > 0 && s.user?.supabaseId) {
+          try {
+            await get().endSession(
+              s.activeSession.subject,
+              s.activeSession.questionsAnswered,
+              s.activeSession.level
+            );
+          } catch (e) {
+            console.error('Failed to flush active session on logout:', e);
+          }
+        }
+
+        const s2 = get();
+        if (s2.user?.supabaseId) {
           try {
             const { clearSessionToken } = await import('./supabase_sync');
-            await clearSessionToken(s.user.supabaseId);
+            await clearSessionToken(s2.user.supabaseId);
           } catch(e) { console.error('clearSessionToken failed:', e); }
         }
         set({
@@ -158,6 +191,8 @@ export const useStore = create(
           topicRecords:      {},
           answeredCorrectly: {},
           answeredWrongly:   {},
+          answeredRows:      [],
+          rewardState:       {},
           sessionHistory:    [],
           lastSession:       null,
           activeSession:     null,
@@ -171,9 +206,28 @@ export const useStore = create(
         const s = get();
         if (!s.isLoggedIn || !s.user?.supabaseId) return true;
 
+        // Same silent-data-loss risk as logout(): this can force-clear state
+        // mid-session (e.g. single-login enforcement kicking in), so flush
+        // any in-progress session's answers to Supabase first.
+        const flushActiveSession = async () => {
+          const cur = get();
+          if (cur.activeSession && cur.activeSession.questionsAnswered > 0) {
+            try {
+              await cur.endSession(
+                cur.activeSession.subject,
+                cur.activeSession.questionsAnswered,
+                cur.activeSession.level
+              );
+            } catch (e) {
+              console.error('Failed to flush active session on forced logout:', e);
+            }
+          }
+        };
+
         // If no session token — user logged in before this feature
         // Force them to re-login to get a proper token
         if (!s.sessionToken) {
+          await flushActiveSession();
           set({ user: null, isLoggedIn: false, sessionToken: null });
           return false;
         }
@@ -182,6 +236,7 @@ export const useStore = create(
           const { verifySessionToken } = await import('./supabase_sync');
           const valid = await verifySessionToken(s.user.supabaseId, s.sessionToken);
           if (!valid) {
+            await flushActiveSession();
             set({ user: null, isLoggedIn: false, sessionToken: null });
             return false;
           }
@@ -358,6 +413,12 @@ export const useStore = create(
             : (s.activeSession.answers || []),
         } : null;
 
+        // Rewards system: append this answer to the running log and
+        // recompute reward state live, so buddy progress/colors update in
+        // real time during a session rather than waiting for next login.
+        const answeredRows = newAnswer ? [...s.answeredRows, newAnswer] : s.answeredRows;
+        const rewardState  = newAnswer ? computeRewardState(answeredRows) : s.rewardState;
+
         set({
           topicRecords:      { ...s.topicRecords, [key]: updated },
           guestCounts,
@@ -365,6 +426,8 @@ export const useStore = create(
           answeredCorrectly,
           answeredWrongly,
           recentTopics,
+          answeredRows,
+          rewardState,
         });
       },
 
