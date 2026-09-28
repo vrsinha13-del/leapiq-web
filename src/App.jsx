@@ -33,13 +33,13 @@ body{-webkit-font-smoothing:antialiased;}
 .primary-btn{width:100%;padding:15px;border:none;border-radius:13px;background:#F2A93B;color:#1B1440;font-family:inherit;font-weight:800;font-size:15px;cursor:pointer;}
 .secondary-btn{width:100%;padding:13px;border:1.5px solid #e5e7eb;border-radius:13px;background:#fff;color:#374151;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;margin-top:10px;}
 .field{width:100%;padding:13px 15px;border:1.5px solid #e5e7eb;border-radius:11px;font-family:inherit;font-size:15px;color:#111;outline:none;margin-bottom:14px;}
-.field:focus{border-color:#0EA5E9;}
+.field:focus{border-color:#4338ca;}
 .ghost-btn{background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:8px;padding:7px 13px;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px;}
 .back-btn{background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:8px;padding:6px 13px;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px;}
-.spinner{width:36px;height:36px;border:3px solid #e5e7eb;border-top-color:#0EA5E9;border-radius:50%;animation:spin 0.7s linear infinite;}
+.spinner{width:36px;height:36px;border:3px solid #e5e7eb;border-top-color:#4338ca;border-radius:50%;animation:spin 0.7s linear infinite;}
 .pin-box{display:flex;gap:10px;justify-content:center;margin:16px 0;}
 .pin-digit{width:46px;height:54px;border:2px solid #e5e7eb;border-radius:12px;font-size:22px;font-weight:800;text-align:center;font-family:inherit;color:#111;outline:none;transition:border-color 0.15s;}
-.pin-digit:focus{border-color:#0EA5E9;}
+.pin-digit:focus{border-color:#4338ca;}
 .pin-digit.pin-error{border-color:#dc2626;background:#fee2e2;}
 .error-box{color:#dc2626;font-size:13px;font-weight:600;padding:10px 14px;background:#fee2e2;border-radius:10px;margin-bottom:12px;}
 .lbl{display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px;}
@@ -133,9 +133,13 @@ export default function App() {
     setScreen('practice');
   }
 
-  function onSessionEnd(result) {
+  async function onSessionEnd(result) {
     if (result.skipEndScreen) { goHome(); return; }
-    useStore.getState().endSession(
+    // Awaited: previously this fired endSession() and moved on immediately,
+    // leaving a window where closing the tab (e.g. to switch browsers) could
+    // cut off the Supabase save before it landed — the exact kind of gap
+    // that made answers/rewards look missing on a different device.
+    await useStore.getState().endSession(
       result.subject,
       result.questionsAnswered,
       result.level || '6'
@@ -227,14 +231,8 @@ function HomeScreen({ setScreen, startSubject, questionsLoaded }) {
 
   return (
     <div>
-      <div style={{ background:'#FF4B4B', padding:'0 0 52px', position:'relative', overflow:'hidden' }}>
-        <div style={{ position:'absolute', top:-70, right:-50, width:240, height:240, borderRadius:'50%', background:'radial-gradient(circle,rgba(255,255,255,0.20) 0%,rgba(255,255,255,0) 70%)', pointerEvents:'none' }}/>
-        <div style={{ position:'absolute', bottom:-40, left:-40, width:180, height:180, borderRadius:'50%', background:'radial-gradient(circle,rgba(34,211,238,0.30) 0%,rgba(34,211,238,0) 70%)', pointerEvents:'none' }}/>
-        <div style={{ position:'absolute', top:14, left:'52%', fontSize:16, color:'#FFC200', opacity:0.9 }}>✦</div>
-        <div style={{ position:'absolute', top:90, right:18, fontSize:22, color:'#fff', opacity:0.7 }}>✦</div>
-        <div style={{ position:'absolute', top:150, left:14, fontSize:14, color:'#fff', opacity:0.55 }}>✦</div>
-        <div style={{ position:'absolute', bottom:70, right:'38%', fontSize:18, color:'#FFC200', opacity:0.7 }}>✦</div>
-        <div style={{ position:'absolute', top:55, left:'28%', fontSize:12, color:'#fff', opacity:0.6 }}>✦</div>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b 0%,#4338ca 60%,#7c3aed 100%)', padding:'0 0 52px', position:'relative', overflow:'hidden' }}>
+        <div style={{ position:'absolute', top:-60, right:-60, width:220, height:220, borderRadius:'50%', background:'rgba(255,255,255,0.04)', pointerEvents:'none' }}/>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'18px' }}>
           <div>
             <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff' }}>📊 PRIMR</div>
@@ -246,7 +244,7 @@ function HomeScreen({ setScreen, startSubject, questionsLoaded }) {
               ? <button className="ghost-btn" onClick={() => { useStore.getState().logout(); showToast('Signed out 👋'); }}>Sign out</button>
               : <>
                   <button className="ghost-btn" onClick={() => setScreen('signin')}>Sign in</button>
-                  <button style={{ background:'#fff', border:'none', color:'#0EA5E9', borderRadius:'99px', padding:'7px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:800, fontSize:13 }}
+                  <button style={{ background:'#fff', border:'none', color:'#4338ca', borderRadius:'99px', padding:'7px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:800, fontSize:13 }}
                     onClick={() => setScreen('signup')}>Register</button>
                 </>
             }
@@ -381,7 +379,7 @@ function SignupDone({ setScreen, goHome }) {
 function KickedOutScreen({ setScreen, goHome }) {
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:'linear-gradient(135deg,#0C4A6E,#0EA5E9)', padding:'32px 20px 48px', textAlign:'center' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
         <div style={{ fontSize:56, marginBottom:8 }}>📱</div>
         <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>
           Signed in elsewhere
@@ -397,7 +395,7 @@ function KickedOutScreen({ setScreen, goHome }) {
             All your answers and progress have been saved. Sign in again to continue.
           </div>
         </div>
-        <button style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#0EA5E9', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer', marginBottom:10 }}
+        <button style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#4338ca', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer', marginBottom:10 }}
           onClick={() => setScreen('signin')}>
           Sign In Again →
         </button>
@@ -415,7 +413,7 @@ function TrialExpiredScreen({ setScreen, goHome }) {
   const { user } = useStore();
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:'linear-gradient(135deg,#0C4A6E,#0EA5E9)', padding:'32px 20px 48px', textAlign:'center' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'32px 20px 48px', textAlign:'center' }}>
         <div style={{ fontSize:56, marginBottom:8 }}>⏰</div>
         <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', marginBottom:6 }}>
           Your free trial has ended
@@ -427,7 +425,7 @@ function TrialExpiredScreen({ setScreen, goHome }) {
       <div style={{ flex:1, padding:'24px 20px', background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18 }}>
         <div style={{ background:'#f0effe', borderRadius:16, padding:20, marginBottom:16, textAlign:'center' }}>
           <div style={{ fontSize:32, marginBottom:8 }}>📊</div>
-          <div style={{ fontSize:14, fontWeight:700, color:'#0EA5E9', marginBottom:4 }}>Your progress is safe!</div>
+          <div style={{ fontSize:14, fontWeight:700, color:'#4338ca', marginBottom:4 }}>Your progress is safe!</div>
           <div style={{ fontSize:13, color:'#6b7280', lineHeight:1.6 }}>
             All your topic progress and session history is saved. Subscribe to continue from where you left off.
           </div>
@@ -579,7 +577,7 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
 
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:subj?.color || '#0EA5E9', padding:'14px 16px' }}>
+      <div style={{ background:subj?.color || '#4338ca', padding:'14px 16px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
           <button className="back-btn" onClick={handlePracticeLater}>Practice Later</button>
           <div style={{ flex:1, textAlign:'center', fontSize:12, color:'rgba(255,255,255,0.85)', fontWeight:600 }}>
@@ -679,18 +677,18 @@ function SessionEndScreen({ setScreen, result, subj, startSubject, goHome }) {
       <div className="info-card" style={{ maxWidth:420, width:'100%', textAlign:'center', marginBottom:16 }}>
         <div style={{ fontSize:64, marginBottom:12 }}>🌟</div>
         <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#111', marginBottom:10 }}>{msg.main}</div>
-        <div style={{ background:subj?.light||'#EEF2FF', borderRadius:14, padding:'14px 16px', color:subj?.color||'#0EA5E9', fontSize:14, fontWeight:600, lineHeight:1.6, marginBottom:20 }}>{msg.hint}</div>
+        <div style={{ background:subj?.light||'#EEF2FF', borderRadius:14, padding:'14px 16px', color:subj?.color||'#4338ca', fontSize:14, fontWeight:600, lineHeight:1.6, marginBottom:20 }}>{msg.hint}</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
           {[['q', questionsAnswered, 'questions answered'],['s', subj?.short, 'subject practised']].map(([k,v,l], i) => (
             <div key={k} style={{ background:'#f8f7ff', borderRadius:11, padding:'14px 8px' }}>
-              <div style={{ fontFamily:"'Syne',system-ui", fontSize:i===0?24:20, fontWeight:800, color:subj?.color||'#0EA5E9' }}>{v}</div>
+              <div style={{ fontFamily:"'Syne',system-ui", fontSize:i===0?24:20, fontWeight:800, color:subj?.color||'#4338ca' }}>{v}</div>
               <div style={{ fontSize:11, color:'#6b7280', marginTop:2 }}>{l}</div>
             </div>
           ))}
         </div>
       </div>
       <div style={{ display:'flex', flexDirection:'column', gap:10, width:'100%', maxWidth:420 }}>
-        <button className="primary-btn" style={{ background:subj?.color||'#0EA5E9' }} onClick={() => startSubject(subject)}>Keep Practising! 🚀</button>
+        <button className="primary-btn" style={{ background:subj?.color||'#4338ca' }} onClick={() => startSubject(subject)}>Keep Practising! 🚀</button>
         <button className="secondary-btn" onClick={goHome}>Choose Another Subject</button>
         <button className="secondary-btn" onClick={() => setScreen('report')}>📊 See My Progress</button>
       </div>
@@ -703,7 +701,7 @@ function StudentReport({ setScreen, goHome }) {
   const { topicRecords, sessionHistory, user, rewardState } = useStore();
   return (
     <div style={{ minHeight:'100dvh' }}>
-      <div style={{ background:'linear-gradient(135deg,#0C4A6E,#0EA5E9)', padding:'20px 18px 40px' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'20px 18px 40px' }}>
         <button className="back-btn" onClick={goHome}>← Back</button>
         <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', margin:'14px 0 4px' }}>⭐ My Strengths</div>
         <div style={{ color:'rgba(255,255,255,0.7)', fontSize:13 }}>{user?.name||'Learning Champion'} · {sessionHistory.length} sessions</div>
@@ -728,16 +726,25 @@ function StudentReport({ setScreen, goHome }) {
                 <div style={{ fontFamily:"'Syne',system-ui", fontWeight:700, fontSize:14, color:'#111' }}>{subj.label}</div>
               </div>
 
-              {/* Buddy evolution row — locked stages greyed out */}
+              {/* Buddy evolution row — achieved stages shown in gold, locked stages greyed out */}
               <div style={{ display:'flex', justifyContent:'space-around', marginBottom:10 }}>
                 {rewards.buddy.map((name, idx) => {
                   const stageNum = idx + 1;
                   const reached  = hasAny && stageNum <= buddyStage;
                   const current  = hasAny && stageNum === buddyStage;
                   return (
-                    <div key={name} style={{ textAlign:'center', opacity: reached ? 1 : 0.3, transition:'opacity 0.6s ease' }}>
-                      <div style={{ fontSize:28, filter: reached ? 'none' : 'grayscale(100%)', transition:'filter 0.6s ease' }}>{rewards.icon[idx]}</div>
-                      <div style={{ fontSize:10, fontWeight:700, color: current ? subj.color : '#9ca3af', marginTop:2 }}>{name}</div>
+                    <div key={name} style={{ textAlign:'center', opacity: reached ? 1 : 0.4, transition:'opacity 0.6s ease' }}>
+                      <div style={{
+                        width:52, height:52, borderRadius:'50%', margin:'0 auto',
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        background: reached ? 'linear-gradient(135deg,#FFE9A8,#F2A93B)' : '#e5e7eb',
+                        border: reached ? '2px solid #E8940F' : '2px solid #d1d5db',
+                        boxShadow: reached ? '0 4px 12px rgba(242,169,59,0.45)' : 'none',
+                        transition:'background 0.6s ease, box-shadow 0.6s ease, border 0.6s ease',
+                      }}>
+                        <div style={{ fontSize:26, filter: reached ? 'none' : 'grayscale(100%)', transition:'filter 0.6s ease' }}>{rewards.icon[idx]}</div>
+                      </div>
+                      <div style={{ fontSize:10, fontWeight:700, color: reached ? '#B8760A' : '#9ca3af', marginTop:4 }}>{name}{reached && ' 🏅'}</div>
                     </div>
                   );
                 })}
@@ -823,7 +830,7 @@ function ParentChangePin({ setScreen, goHome }) {
 
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:'linear-gradient(135deg,#0C4A6E,#0EA5E9)', padding:'28px 20px 44px', textAlign:'center' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'28px 20px 44px', textAlign:'center' }}>
         {user?.parentPinChanged && <div style={{ textAlign:'left' }}><button className="back-btn" onClick={() => setScreen('parent_dash')}>← Back</button></div>}
         <div style={{ fontSize:44, marginBottom:8 }}>🔑</div>
         <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff', marginBottom:6 }}>Set Your Private PIN</div>
@@ -840,7 +847,7 @@ function ParentChangePin({ setScreen, goHome }) {
             onChange={e=>setConfPin(e.target.value.replace(/\D/,'').slice(0,6))}
             placeholder="••••••" style={{ letterSpacing:8, fontSize:22, textAlign:'center' }}/>
           {err && <div className="error-box">{err}</div>}
-          <div style={{ background:'#EEF2FF', borderRadius:12, padding:'12px 14px', marginBottom:16, fontSize:12, color:'#0EA5E9', fontWeight:600, lineHeight:1.6 }}>
+          <div style={{ background:'#EEF2FF', borderRadius:12, padding:'12px 14px', marginBottom:16, fontSize:12, color:'#4338ca', fontWeight:600, lineHeight:1.6 }}>
             ⚠ Once set, the student's original PIN will stop working.
           </div>
           <button type="submit" className="primary-btn">Set PIN & Enter Dashboard →</button>
@@ -855,7 +862,7 @@ function ParentDashboard({ setScreen, goHome }) {
   const { topicRecords, sessionHistory, user } = useStore();
   return (
     <div style={{ minHeight:'100dvh' }}>
-      <div style={{ background:'linear-gradient(135deg,#0C4A6E,#0EA5E9)', padding:'20px 18px 40px' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'20px 18px 40px' }}>
         <button className="back-btn" onClick={goHome}>← Home</button>
         <div style={{ fontFamily:"'Syne',system-ui", fontSize:24, fontWeight:800, color:'#fff', margin:'14px 0 4px' }}>📊 Full Report Card</div>
         <div style={{ color:'rgba(255,255,255,0.7)', fontSize:13 }}>
@@ -941,7 +948,7 @@ function ParentDashboard({ setScreen, goHome }) {
                     <div style={{ fontSize:13, fontWeight:600, color:'#111' }}>{sub?.label||s.subject}</div>
                     <div style={{ fontSize:11, color:'#9ca3af' }}>{new Date(s.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div>
                   </div>
-                  <div style={{ fontSize:13, fontWeight:700, color:'#0EA5E9' }}>{s.questionsAnswered} Qs</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:'#4338ca' }}>{s.questionsAnswered} Qs</div>
                 </div>
               );
             })}
