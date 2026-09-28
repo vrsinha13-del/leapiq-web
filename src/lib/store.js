@@ -470,13 +470,19 @@ export const useStore = create(
             level: level || '6',
           }).catch(err => { console.error('Session save failed:', err); return null; });
 
-          // Then bulk save answers with session_id
+          // Then bulk save answers with session_id.
+          // AWAITED (not fire-and-forget): endSession is called right when a
+          // student finishes practising and may switch devices/browsers
+          // moments later. An un-awaited save could get cut off mid-flight
+          // by the tab closing, silently losing that session's answer rows
+          // — which then makes rewards/history look wrong on the next
+          // device until those rows exist in Supabase.
           if (sessionResult?.sessionId && answers.length > 0) {
-            saveAnswers(
-              s.user.supabaseId,
-              sessionResult.sessionId,
-              answers
-            ).catch(err => console.error('Answers save failed:', err));
+            try {
+              await saveAnswers(s.user.supabaseId, sessionResult.sessionId, answers);
+            } catch (err) {
+              console.error('Answers save failed:', err);
+            }
           }
         }
 
@@ -524,6 +530,11 @@ export const useStore = create(
         answeredWrongly:   s.answeredWrongly,
         sessionToken:      s.sessionToken,
         recentTopics:      s.recentTopics,
+        // Rewards system — without these two, a plain page reload (not a
+        // fresh login) reset buddy/badge progress to empty, since nothing
+        // re-ran computeRewardState until the next full login() call.
+        answeredRows:      s.answeredRows,
+        rewardState:       s.rewardState,
       }),
     }
   )
