@@ -12,7 +12,7 @@ const fieldStyle = {
   outline:'none', marginBottom:14
 };
 
-function showToast(msg, bg='#1e1b4b') {
+function showToast(msg, bg='#1B1440') {
   const t = document.createElement('div');
   t.textContent = msg;
   Object.assign(t.style, {
@@ -519,7 +519,7 @@ function SchoolLoginTab({ setScreen, goHome }) {
         <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>Password</label>
         <input style={fieldStyle} type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Your password" />
         {err && <div style={{ color:'#dc2626', fontSize:13, fontWeight:600, padding:'10px 14px', background:'#fee2e2', borderRadius:10, marginBottom:12 }}>{err}</div>}
-        <button type="submit" style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#1e1b4b', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}>
+        <button type="submit" style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#1B1440', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}>
           School Login →
         </button>
       </form>
@@ -595,7 +595,7 @@ export function ForgotPINScreen({ setScreen, goHome }) {
 
   return (
     <div style={{ minHeight:'100dvh', display:'flex', flexDirection:'column' }}>
-      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#312e81)', padding:'28px 20px 44px', textAlign:'center' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#4338ca)', padding:'28px 20px 44px', textAlign:'center' }}>
         <div style={{ textAlign:'left' }}>
           <button style={{ background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', borderRadius:8, padding:'6px 13px', cursor:'pointer', fontFamily:'inherit', fontWeight:700, fontSize:13 }}
             onClick={() => setScreen('signin')}>← Back</button>
@@ -610,7 +610,7 @@ export function ForgotPINScreen({ setScreen, goHome }) {
             <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>Student's Email Address</label>
             <input style={fieldStyle} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="student@email.com" />
             {err && <div style={{ color:'#dc2626', fontSize:13, fontWeight:600, padding:'10px 14px', background:'#fee2e2', borderRadius:10, marginBottom:12 }}>{err}</div>}
-            <button type="submit" style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#1e1b4b', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}>
+            <button type="submit" style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#1B1440', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}>
               Send New PIN →
             </button>
           </form>
