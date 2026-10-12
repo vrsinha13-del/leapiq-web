@@ -34,7 +34,7 @@ body{-webkit-font-smoothing:antialiased;}
 .secondary-btn{width:100%;padding:13px;border:1.5px solid #e5e7eb;border-radius:13px;background:#fff;color:#374151;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;margin-top:10px;}
 .field{width:100%;padding:13px 15px;border:1.5px solid #e5e7eb;border-radius:11px;font-family:inherit;font-size:15px;color:#111;outline:none;margin-bottom:14px;}
 .field:focus{border-color:#4338ca;}
-.ghost-btn{background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:8px;padding:7px 13px;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px;}
+.ghost-btn{background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:8px;padding:7px 13px;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px;white-space:nowrap;}
 .back-btn{background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:8px;padding:6px 13px;cursor:pointer;font-family:inherit;font-weight:700;font-size:13px;}
 .spinner{width:36px;height:36px;border:3px solid #e5e7eb;border-top-color:#4338ca;border-radius:50%;animation:spin 0.7s linear infinite;}
 .pin-box{display:flex;gap:10px;justify-content:center;margin:16px 0;}
@@ -233,18 +233,18 @@ function HomeScreen({ setScreen, startSubject, questionsLoaded }) {
     <div>
       <div style={{ background:'linear-gradient(135deg,#1e1b4b 0%,#4338ca 60%,#7c3aed 100%)', padding:'0 0 52px', position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', top:-60, right:-60, width:220, height:220, borderRadius:'50%', background:'rgba(255,255,255,0.04)', pointerEvents:'none' }}/>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'18px' }}>
-          <div>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12, padding:'18px' }}>
+          <div style={{ whiteSpace:'nowrap' }}>
             <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff' }}>📊 PRIMR</div>
             <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', marginTop:1 }}>Adaptive Learning · Grades 5–10</div>
           </div>
-          <div style={{ display:'flex', gap:8 }}>
+          <div style={{ display:'flex', gap:8, flexWrap:'nowrap' }}>
             <button className="ghost-btn" onClick={() => setScreen('report')}>🏆 My Rewards</button>
             {isLoggedIn
               ? <button className="ghost-btn" onClick={() => { useStore.getState().logout(); showToast('Signed out 👋'); }}>Sign out</button>
               : <>
                   <button className="ghost-btn" onClick={() => setScreen('signin')}>Sign in</button>
-                  <button style={{ background:'#fff', border:'none', color:'#4338ca', borderRadius:'99px', padding:'7px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:800, fontSize:13 }}
+                  <button style={{ background:'#fff', border:'none', color:'#4338ca', borderRadius:'99px', padding:'7px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:800, fontSize:13, whiteSpace:'nowrap' }}
                     onClick={() => setScreen('signup')}>Register</button>
                 </>
             }
