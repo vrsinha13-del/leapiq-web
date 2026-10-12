@@ -273,7 +273,7 @@ export function SigninScreen({ setScreen, goHome, parentOnly = false }) {
         </div>
         <div style={{ fontSize:44, marginBottom:8 }}>👋</div>
         <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff', marginBottom:16 }}>
-          {parentOnly ? 'Parent / Teacher Login' : 'Welcome back!'}
+          {parentOnly ? 'Parent Login' : 'Welcome back!'}
         </div>
         <div style={{ display:'flex', background:'rgba(255,255,255,0.15)', borderRadius:12, padding:4, gap:4 }}>
           {tabs.map(([id, label]) => (
