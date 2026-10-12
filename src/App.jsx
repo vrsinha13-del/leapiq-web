@@ -325,28 +325,18 @@ function HomeScreen({ setScreen, startSubject, questionsLoaded }) {
             );
           })}
         </div>
-        <div className="info-card" style={{ marginTop:14, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div>
-            <div style={{ fontFamily:"'Syne',system-ui", fontSize:13, fontWeight:700, color:'#111' }}>👨‍👩‍👧 Parent Login</div>
-            <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>Separate secure login · Full report card</div>
-          </div>
-          <button style={{ background:'#1B1440', border:'none', color:'#fff', borderRadius:10, padding:'8px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:700, fontSize:13 }}
-            onClick={() => setScreen('parent_signin')}>Login →</button>
-        </div>
-        <div className="info-card" style={{ marginTop:10, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div>
-            <div style={{ fontFamily:"'Syne',system-ui", fontSize:13, fontWeight:700, color:'#111' }}>🏫 School Login</div>
-            <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>For School Admins &amp; Teachers</div>
-          </div>
-          <button style={{ background:'#4338ca', border:'none', color:'#fff', borderRadius:10, padding:'8px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:700, fontSize:13 }}
-            onClick={() => { window.location.href = 'https://primr-admin.vercel.app/'; }}>Login →</button>
-        </div>
         {!isLoggedIn && (
-          <div style={{ background:'linear-gradient(135deg,#F2A93B,#F0654B)', borderRadius:14, padding:'14px 18px', color:'#1B1440', fontWeight:800, fontSize:13, cursor:'pointer', textAlign:'center', marginTop:12, marginBottom:20 }}
+          <div style={{ background:'linear-gradient(135deg,#F2A93B,#F0654B)', borderRadius:14, padding:'14px 18px', color:'#1B1440', fontWeight:800, fontSize:13, cursor:'pointer', textAlign:'center', marginTop:14 }}
             onClick={() => setScreen('signup')}>
             📬 Register to save your progress →
           </div>
         )}
+        <div style={{ display:'flex', gap:10, marginTop:12 }}>
+          <button style={{ flex:1, background:'#fff', border:'1.5px solid #e5e7eb', color:'#1B1440', borderRadius:12, padding:'10px 8px', cursor:'pointer', fontFamily:'inherit', fontWeight:700, fontSize:13 }}
+            onClick={() => setScreen('parent_signin')}>👨‍👩‍👧 Parent Login</button>
+          <button style={{ flex:1, background:'#fff', border:'1.5px solid #e5e7eb', color:'#1B1440', borderRadius:12, padding:'10px 8px', cursor:'pointer', fontFamily:'inherit', fontWeight:700, fontSize:13 }}
+            onClick={() => { window.location.href = 'https://primr-admin.vercel.app/'; }}>🏫 School Login</button>
+        </div>
         <div style={{ height:20 }}/>
       </div>
     </div>
