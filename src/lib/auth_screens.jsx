@@ -289,7 +289,7 @@ export function SigninScreen({ setScreen, goHome, parentOnly = false }) {
       <div style={{ flex:1, background:'#fff', borderTopLeftRadius:22, borderTopRightRadius:22, marginTop:-18, overflowY:'auto' }}>
         {tab === 'student' && <StudentLoginTab setScreen={setScreen} goHome={goHome} />}
         {tab === 'parent'  && <ParentLoginTab  setScreen={setScreen} goHome={goHome} />}
-        {tab === 'school'  && <SchoolLoginTab  setScreen={setScreen} goHome={goHome} />}
+        {tab === 'school'  && <SchoolLoginTab />}
       </div>
     </div>
   );
@@ -498,31 +498,21 @@ function ParentLoginTab({ setScreen, goHome }) {
 }
 
 // ── School Login Tab ────────────────────────────────────────────────────────
-function SchoolLoginTab({ setScreen, goHome }) {
-  const [email, setEmail] = useState('');
-  const [pass,  setPass]  = useState('');
-  const [err,   setErr]   = useState('');
-
-  function handleLogin(e) {
-    e.preventDefault();
-    setErr('School admin login coming soon. Please contact support@primr.app');
-  }
-
+function SchoolLoginTab() {
   return (
-    <div style={{ padding:'24px 20px' }}>
-      <div style={{ background:'#fef3c7', borderRadius:12, padding:'12px 14px', marginBottom:20, fontSize:12, color:'#92400e', fontWeight:600, lineHeight:1.5 }}>
-        🏫 School admin accounts are created by PRIMR. Contact us at support@primr.app to set up your school account.
+    <div style={{ padding:'24px 20px', textAlign:'center' }}>
+      <div style={{ fontSize:44, marginBottom:8 }}>🏫</div>
+      <div style={{ fontFamily:"'Syne',system-ui", fontSize:17, fontWeight:800, color:'#1B1440', marginBottom:6 }}>School Login</div>
+      <div style={{ fontSize:13, color:'#6b7280', lineHeight:1.6, marginBottom:20 }}>
+        School Admins and Teachers sign in on the PRIMR School portal.
       </div>
-      <form onSubmit={handleLogin} style={{ display:'flex', flexDirection:'column' }}>
-        <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>School Admin Email</label>
-        <input style={fieldStyle} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin@school.com" />
-        <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>Password</label>
-        <input style={fieldStyle} type="password" value={pass} onChange={e=>setPass(e.target.value)} placeholder="Your password" />
-        {err && <div style={{ color:'#dc2626', fontSize:13, fontWeight:600, padding:'10px 14px', background:'#fee2e2', borderRadius:10, marginBottom:12 }}>{err}</div>}
-        <button type="submit" style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#1B1440', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}>
-          School Login →
-        </button>
-      </form>
+      <button style={{ width:'100%', padding:15, border:'none', borderRadius:13, background:'#1B1440', color:'#fff', fontFamily:'inherit', fontWeight:800, fontSize:15, cursor:'pointer' }}
+        onClick={() => { window.location.href = 'https://primr-admin.vercel.app/'; }}>
+        Go to School Login →
+      </button>
+      <div style={{ fontSize:12, color:'#9ca3af', marginTop:14 }}>
+        School accounts are created by PRIMR. Need one? Contact support@primr.app
+      </div>
     </div>
   );
 }
