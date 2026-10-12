@@ -233,12 +233,12 @@ function HomeScreen({ setScreen, startSubject, questionsLoaded }) {
     <div>
       <div style={{ background:'linear-gradient(135deg,#1e1b4b 0%,#4338ca 60%,#7c3aed 100%)', padding:'0 0 52px', position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', top:-60, right:-60, width:220, height:220, borderRadius:'50%', background:'rgba(255,255,255,0.04)', pointerEvents:'none' }}/>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12, padding:'18px' }}>
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-start', gap:12, padding:'18px' }}>
           <div style={{ whiteSpace:'nowrap' }}>
             <div style={{ fontFamily:"'Syne',system-ui", fontSize:22, fontWeight:800, color:'#fff' }}>📊 PRIMR</div>
             <div style={{ fontSize:11, color:'rgba(255,255,255,0.55)', marginTop:1 }}>Adaptive Learning · Grades 5–10</div>
           </div>
-          <div style={{ display:'flex', gap:8, flexWrap:'nowrap' }}>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
             <button className="ghost-btn" onClick={() => setScreen('report')}>🏆 My Rewards</button>
             {isLoggedIn
               ? <button className="ghost-btn" onClick={() => { useStore.getState().logout(); showToast('Signed out 👋'); }}>Sign out</button>
