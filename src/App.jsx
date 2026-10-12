@@ -327,11 +327,19 @@ function HomeScreen({ setScreen, startSubject, questionsLoaded }) {
         </div>
         <div className="info-card" style={{ marginTop:14, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div>
-            <div style={{ fontFamily:"'Syne',system-ui", fontSize:13, fontWeight:700, color:'#111' }}>👨‍👩‍👧 Parent / Teacher Portal</div>
+            <div style={{ fontFamily:"'Syne',system-ui", fontSize:13, fontWeight:700, color:'#111' }}>👨‍👩‍👧 Parent Login</div>
             <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>Separate secure login · Full report card</div>
           </div>
           <button style={{ background:'#1B1440', border:'none', color:'#fff', borderRadius:10, padding:'8px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:700, fontSize:13 }}
             onClick={() => setScreen('parent_signin')}>Login →</button>
+        </div>
+        <div className="info-card" style={{ marginTop:10, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div>
+            <div style={{ fontFamily:"'Syne',system-ui", fontSize:13, fontWeight:700, color:'#111' }}>🏫 School Login</div>
+            <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>For School Admins &amp; Teachers</div>
+          </div>
+          <button style={{ background:'#4338ca', border:'none', color:'#fff', borderRadius:10, padding:'8px 16px', cursor:'pointer', fontFamily:'inherit', fontWeight:700, fontSize:13 }}
+            onClick={() => { window.location.href = 'https://primr-admin.vercel.app/'; }}>Login →</button>
         </div>
         {!isLoggedIn && (
           <div style={{ background:'linear-gradient(135deg,#F2A93B,#F0654B)', borderRadius:14, padding:'14px 18px', color:'#1B1440', fontWeight:800, fontSize:13, cursor:'pointer', textAlign:'center', marginTop:12, marginBottom:20 }}
@@ -360,7 +368,7 @@ function SignupDone({ setScreen, goHome }) {
         <div style={{ background:'#f0fdf4', border:'2px solid #86efac', borderRadius:16, padding:20, textAlign:'center', marginBottom:20 }}>
           <div style={{ fontSize:13, fontWeight:700, color:'#15803d', marginBottom:4 }}>🔑 Parent Access PIN</div>
           <div style={{ fontFamily:"'Syne',system-ui", fontSize:36, fontWeight:800, color:'#166534', letterSpacing:6, margin:'12px 0' }}>{pin}</div>
-          <div style={{ fontSize:12, color:'#166534', lineHeight:1.6 }}>Share this with your parent or teacher so they can view your full progress report.</div>
+          <div style={{ fontSize:12, color:'#166534', lineHeight:1.6 }}>Share this with your parent so they can view your full progress report.</div>
           <div style={{ fontSize:11, color:'#15803d', marginTop:10, fontWeight:600, background:'#dcfce7', borderRadius:8, padding:'8px 12px' }}>
             ⚠ Your parent will set a private PIN on their first login.
           </div>
