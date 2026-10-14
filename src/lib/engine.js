@@ -82,6 +82,12 @@ export const ADAPTIVE_THRESHOLD = 200; // questions per subject before adaptive 
 export const MIN_TOPIC_ANSWERS  = 5;   // min answers per topic before adaptive scoring
 export const WRONG_RETRY_AFTER  = 10;  // show wrong answer again after N other questions in topic
 
+// ─── SIMPLE PROGRESSION RULES ───────────────────────────────────────────────
+// Next grade level of a topic unlocks after this many answers at this accuracy
+export const LEVEL_UNLOCK = { minQ: 30, minAcc: 80 };
+// A topic level counts as "mastered" (certificates, gold star) at this bar
+export const MASTERY_RULE = { minQ: 50, minAcc: 85, minDays: 5 };
+
 // ─── GET TIMER ──────────────────────────────────────────────────────────────
 export function getTimers(subject, category, difficulty) {
   const cfg  = SUBJECT_CONFIG[subject];
@@ -133,18 +139,16 @@ export function emptyTopicRecord() {
   };
 }
 
-// ─── TOPIC SCORE ────────────────────────────────────────────────────────────
+// ─── TOPIC SCORE (plain accuracy = correct / answered) ────────────────────────────────────────────────────────────
 export function topicScore(r) {
   if (!r || r.answered < 3) return null;
-  const eff = (r.correct - r.slow) + (r.slow * 0.7);
-  return Math.round((eff / r.answered) * 100);
+  return Math.round((r.correct / r.answered) * 100);
 }
 
 export function diffScore(r, diff) {
   const d = r?.[diff];
   if (!d || d.answered < 3) return null;
-  const eff = (d.correct - d.slow) + (d.slow * 0.7);
-  return Math.round((eff / d.answered) * 100);
+  return Math.round((d.correct / d.answered) * 100);
 }
 
 // ─── TOPIC WEIGHT ───────────────────────────────────────────────────────────
@@ -177,78 +181,96 @@ export function topicWeight(r, totalSubjectAnswered, freshQuestionCount) {
   return 0.5;
 }
 
-// ─── IS TOPIC MASTERED ──────────────────────────────────────────────────────
-export function isTopicMastered(record, subject, category) {
-  if (!record) return false;
-  for (const diff of ['easy', 'medium', 'hard']) {
-    const criteria = getMasteryCriteria(subject, category, diff);
-    const d        = record[diff];
-    if (!d || d.answered < criteria.minQ) return false;
-    if (SUBJECT_CONFIG[subject]?.speedPenalty && subject !== 'gk') {
-      const score = diffScore(record, diff);
-      if (score === null || score < criteria.minAcc) return false;
-    } else {
-      const acc = d.answered > 0 ? Math.round((d.correct / d.answered) * 100) : 0;
-      if (acc < criteria.minAcc) return false;
-    }
-    const days = record.daysPracticed || [];
-    if (days.length < criteria.minDays) return false;
-  }
-  return true;
+// ─── ACCURACY HELPER ────────────────────────────────────────────────────────
+function plainAccuracy(record) {
+  if (!record || !record.answered) return 0;
+  return Math.round((record.correct / record.answered) * 100);
 }
 
+// ─── IS LEVEL PASSED (unlocks the next grade level of the topic) ────────────
+// minQ shrinks when a topic level has few questions in the bank (70% of them),
+// so small topics can never get stuck; it never goes above LEVEL_UNLOCK.minQ.
+export function levelPassMinQ(questionCount) {
+  if (!questionCount) return LEVEL_UNLOCK.minQ;
+  return Math.min(LEVEL_UNLOCK.minQ, Math.max(5, Math.floor(questionCount * 0.7)));
+}
+export function isLevelPassed(record, questionCount) {
+  if (!record) return false;
+  return record.answered >= levelPassMinQ(questionCount) && plainAccuracy(record) >= LEVEL_UNLOCK.minAcc;
+}
+
+// ─── IS TOPIC MASTERED ──────────────────────────────────────────────────────
+// Simple rule, any difficulty: 50+ answers, 85%+ accuracy, on 5+ different days.
+// questionCount (optional): questions available at this topic level. For small
+// topics the 50-answer bar shrinks to 80% of the questions so it stays reachable.
+export function isTopicMastered(record, _subject, _category, questionCount) {
+  if (!record) return false;
+  const needQ = questionCount
+    ? Math.min(MASTERY_RULE.minQ, Math.max(10, Math.floor(questionCount * 0.8)))
+    : MASTERY_RULE.minQ;
+  if (record.answered < needQ) return false;
+  if (plainAccuracy(record) < MASTERY_RULE.minAcc) return false;
+  return (record.daysPracticed || []).length >= MASTERY_RULE.minDays;
+}
+
+// Levels (and question counts) available for a topic, remembered by selectNextQuestion
+const LEVELS_SEEN = {};
+const UNLOCK_ANNOUNCED = {};
+
 // ─── GET TOPIC LEVEL MIX ───────────────────────────────────────────────────
-export function getTopicLevelMix(topicRecords, subject, topic, category) {
-  function rec(level)      { return topicRecords[`${subject}_${level}_${topic}`]; }
-  function score(level)    { return topicScore(rec(level)) || 0; }
-  function mastered(level) { return isTopicMastered(rec(level), subject, category); }
+// availableLevels: grade levels that actually have questions for this topic.
+// The student starts at the LOWEST available level; each next level unlocks
+// when the previous one is passed (30+ answers at 80%+).
+export function getTopicLevelMix(topicRecords, subject, topic, category, availableLevels, levelCounts, exhaustedLevels) {
+  const exhausted = exhaustedLevels || {};
+  const lv = (availableLevels && availableLevels.length ? availableLevels : ['6', '7', '8'])
+    .slice().sort((a, b) => Number(a) - Number(b));
+  const rec = level => topicRecords[`${subject}_${level}_${topic}`];
+  // Plain accuracy (no speed penalty); counts as 0 until 3 answers at that level
+  const score = level => {
+    const r = rec(level);
+    return r && r.answered >= 3 ? plainAccuracy(r) : 0;
+  };
 
-  if (!mastered('6')) return { '6': 1.0, '7': 0.0, '8': 0.0 };
+  let unlocked = 1;
+  // A level also counts as done when the student has no fresh questions left in it,
+  // so the next grade level opens instead of the topic running dry.
+  while (unlocked < lv.length && (exhausted[lv[unlocked - 1]] || isLevelPassed(rec(lv[unlocked - 1]), (levelCounts || {})[lv[unlocked - 1]]))) unlocked++;
 
-  const l7Score = score('7');
-  let l7Share = l7Score < 30 ? 0.20 : l7Score < 70 ? 0.40 : 0.60;
+  const mix = {};
+  lv.forEach(l => { mix[l] = 0; });
+  if (unlocked === 1) { mix[lv[0]] = 1.0; return mix; }
 
-  if (!mastered('7')) {
-    return {
-      '6': parseFloat((1 - l7Share).toFixed(2)),
-      '7': parseFloat(l7Share.toFixed(2)),
-      '8': 0.0,
-    };
-  }
-
-  const l8Score = score('8');
-  let l8Share = l8Score < 30 ? 0.20 : l8Score < 70 ? 0.30 : 0.40;
-  const remaining = parseFloat((1 - l8Share).toFixed(2));
-  const l6Final   = Math.max(0.30, parseFloat((remaining / 2).toFixed(2)));
-  const l7Final   = Math.max(0.30, parseFloat((remaining - l6Final).toFixed(2)));
-
-  return { '6': l6Final, '7': l7Final, '8': parseFloat(l8Share.toFixed(2)) };
+  const top = lv[unlocked - 1];
+  const sc = score(top);
+  const topShare = unlocked === 2
+    ? (sc < 30 ? 0.20 : sc < 70 ? 0.40 : 0.60)
+    : (sc < 30 ? 0.20 : sc < 70 ? 0.30 : 0.40);
+  const rest = (1 - topShare) / (unlocked - 1);
+  for (let i = 0; i < unlocked - 1; i++) mix[lv[i]] = parseFloat(rest.toFixed(2));
+  mix[top] = parseFloat(topShare.toFixed(2));
+  return mix;
 }
 
 // ─── CHECK TOPIC LEVEL UNLOCK ──────────────────────────────────────────────
 export function checkTopicLevelUnlock(topicRecords, subject, topic, category) {
-  const levelNames = { '6': 'Grade VI', '7': 'Grade VII', '8': 'Grade VIII' };
+  const levelNames = { '5': 'Grade V', '6': 'Grade VI', '7': 'Grade VII', '8': 'Grade VIII', '9': 'Grade IX', '10': 'Grade X' };
+  const seen = LEVELS_SEEN[`${subject}__${topic}`] || { levels: [], counts: {} };
+  const lv = seen.levels;
 
-  if (isTopicMastered(topicRecords[`${subject}_6_${topic}`], subject, category)) {
-    const l7Key = `${subject}_7_${topic}`;
-    if (!topicRecords[l7Key] || topicRecords[l7Key].answered === 0) {
-      return {
-        unlocked: true, topic,
-        message: `Amazing! You have mastered ${levelNames['6']} ${topic}! ${levelNames['7']} questions unlocking now! 🚀`,
-      };
+  for (let i = 0; i < lv.length - 1; i++) {
+    const cur = lv[i], next = lv[i + 1];
+    if (isLevelPassed(topicRecords[`${subject}_${cur}_${topic}`], seen.counts[cur])) {
+      const nk = `${subject}_${next}_${topic}`;
+      if (!UNLOCK_ANNOUNCED[nk] && (!topicRecords[nk] || topicRecords[nk].answered === 0)) {
+        UNLOCK_ANNOUNCED[nk] = true;
+        return {
+          unlocked: true, topic,
+          message: `Amazing! You have passed ${levelNames[cur] || cur} ${topic}! ${levelNames[next] || next} questions unlocking now! 🚀`,
+        };
+      }
     }
   }
-
-  if (isTopicMastered(topicRecords[`${subject}_7_${topic}`], subject, category)) {
-    const l8Key = `${subject}_8_${topic}`;
-    if (!topicRecords[l8Key] || topicRecords[l8Key].answered === 0) {
-      return {
-        unlocked: true, topic,
-        message: `Incredible! You have mastered ${levelNames['7']} ${topic}! ${levelNames['8']} questions unlocking now! 🔥`,
-      };
-    }
-  }
-
   return { unlocked: false };
 }
 
@@ -298,12 +320,36 @@ export function selectNextQuestion(
 
   for (const [topic, levels] of Object.entries(byTopic)) {
     const category = levels.category || '';
-    const mix      = getTopicLevelMix(topicRecords, subject, topic, category);
+    const availLevels = Object.keys(levels).filter(k => k !== 'category')
+      .sort((a, b) => Number(a) - Number(b));
+    if (!availLevels.length) continue;
+    const levelCounts = {};
+    for (const l of availLevels) {
+      levelCounts[l] = ['easy', 'medium', 'hard'].reduce((n, d) => n + ((levels[l][d] || []).length), 0);
+    }
+    LEVELS_SEEN[`${subject}__${topic}`] = { levels: availLevels, counts: levelCounts };
+    // Levels where every question has already been answered correctly
+    const exhaustedLevels = {};
+    for (const l of availLevels) {
+      const all = ['easy', 'medium', 'hard'].flatMap(d => levels[l][d] || []);
+      exhaustedLevels[l] = all.length > 0 && all.every(q => aC[q.id]);
+    }
+    const mix = getTopicLevelMix(topicRecords, subject, topic, category, availLevels, levelCounts, exhaustedLevels);
+    // Never pick an exhausted level; share its weight among the others
+    let liveSum = 0;
+    for (const l of availLevels) { if (exhaustedLevels[l]) mix[l] = 0; liveSum += mix[l] || 0; }
+    if (liveSum <= 0) {
+      const live = availLevels.filter(l => !exhaustedLevels[l]);
+      if (!live.length) continue;
+      live.forEach(l => { mix[l] = 1 / live.length; });
+    } else if (liveSum < 0.999) {
+      for (const l of availLevels) mix[l] = (mix[l] || 0) / liveSum;
+    }
 
     // Pick level based on mix weights
     const rand = Math.random();
     let cumulative  = 0;
-    let chosenLevel = '6';
+    let chosenLevel = availLevels[0];
     for (const [level, weight] of Object.entries(mix)) {
       if (weight <= 0) continue;
       cumulative += weight;
@@ -315,7 +361,7 @@ export function selectNextQuestion(
 
     const key     = `${subject}_${chosenLevel}_${topic}`;
     const record  = topicRecords[key] || emptyTopicRecord();
-    const isMast  = isTopicMastered(record, subject, category);
+    const isMast  = isTopicMastered(record, subject, category, levelCounts[chosenLevel]);
     const diffLevel = record.diffLevel || 0;
     const diffKey   = ['easy', 'medium', 'hard'][diffLevel];
     const allDiff   = difficulties[diffKey] || [];
@@ -349,6 +395,18 @@ export function selectNextQuestion(
       candidates = allDiff.filter(q => !aC[q.id]);
     }
 
+    // Last resort: any unanswered question of this topic level at ANY difficulty
+    // (nearest to the student's current difficulty first), so a topic never
+    // runs dry while easier or harder unanswered questions remain.
+    if (!candidates.length) {
+      const order = diffLevel === 0 ? ['easy', 'medium', 'hard']
+        : diffLevel === 1 ? ['medium', 'easy', 'hard'] : ['hard', 'medium', 'easy'];
+      for (const d of order) {
+        const rest = (difficulties[d] || []).filter(q => !aC[q.id]);
+        if (rest.length) { candidates = rest; break; }
+      }
+    }
+
     if (!candidates.length) continue;
 
     // ── TOPIC WEIGHT ──────────────────────────────────────────────
@@ -377,17 +435,27 @@ export function selectNextQuestion(
     }
   }
 
-  // Fallback — if all topics are in recent window (very few topics), ignore recency
+  // Fallback — if all topics are in the recent window (very few topics) or
+  // nothing is left at the usual difficulty, ignore recency and difficulty and
+  // use any unanswered question, lowest grade level first.
   if (!pool.length) {
     for (const [topic, levels] of Object.entries(byTopic)) {
-      const category  = levels.category || '';
-      const key       = `${subject}_6_${topic}`;
-      const record    = topicRecords[key] || emptyTopicRecord();
-      const diffLevel = record.diffLevel || 0;
-      const diffKey   = ['easy', 'medium', 'hard'][diffLevel];
-      const candidates = (levels['6'] || {})[diffKey]?.filter(q => !aC[q.id]) || [];
-      if (candidates.length) {
-        pool.push({ topic, category, candidates, record, key, chosenLevel: '6', isMast: false });
+      const category = levels.category || '';
+      const lvls = Object.keys(levels).filter(k => k !== 'category')
+        .sort((a, b) => Number(a) - Number(b));
+      for (const level of lvls) {
+        const record = topicRecords[`${subject}_${level}_${topic}`] || emptyTopicRecord();
+        const diffKey = ['easy', 'medium', 'hard'][record.diffLevel || 0];
+        let candidates = (levels[level][diffKey] || []).filter(q => !aC[q.id]);
+        if (!candidates.length) {
+          candidates = ['easy', 'medium', 'hard']
+            .flatMap(d => levels[level][d] || [])
+            .filter(q => !aC[q.id]);
+        }
+        if (candidates.length) {
+          pool.push({ topic, category, candidates, record, key: `${subject}_${level}_${topic}`, chosenLevel: level, isMast: false });
+          break;
+        }
       }
     }
   }
@@ -536,7 +604,8 @@ export function fullTopicBreakdown(topicRecords, subject) {
       const level    = parts[0];
       const topic    = parts.slice(1).join('_');
       const score    = topicScore(r);
-      const mastered = isTopicMastered(r, subject, '');
+      const seenCounts = (LEVELS_SEEN[`${subject}__${topic}`] || {}).counts || {};
+      const mastered = isTopicMastered(r, subject, '', seenCounts[level]);
       return {
         level, levelLabel: levelName(level), topic, label: tl(topic),
         answered: r.answered, correct: r.correct, score,
