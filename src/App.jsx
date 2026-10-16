@@ -28,7 +28,7 @@ body{-webkit-font-smoothing:antialiased;}
 .subj-card{background:#fff;border-radius:18px;padding:18px;cursor:pointer;position:relative;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,0.07);animation:fadeUp 0.4s both;transition:transform 0.15s,box-shadow 0.15s;}
 .subj-card:active{transform:scale(0.97);}
 .info-card{background:#fff;border-radius:18px;padding:18px;box-shadow:0 2px 12px rgba(0,0,0,0.06);}
-.q-card{background:#fff;border-radius:18px;padding:20px;margin-bottom:16px;font-size:17px;font-weight:700;color:#111;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,0.07);}
+.q-card{white-space:pre-line;background:#fff;border-radius:18px;padding:20px;margin-bottom:16px;font-size:17px;font-weight:700;color:#111;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,0.07);}
 .opt-btn{background:#fff;border:1.5px solid #e5e7eb;border-radius:13px;padding:13px 14px;text-align:left;font-size:14px;font-weight:600;color:#111;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:11px;transition:all 0.15s;width:100%;}
 .primary-btn{width:100%;padding:15px;border:none;border-radius:13px;background:#F2A93B;color:#1B1440;font-family:inherit;font-weight:800;font-size:15px;cursor:pointer;}
 .secondary-btn{width:100%;padding:13px;border:1.5px solid #e5e7eb;border-radius:13px;background:#fff;color:#374151;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;margin-top:10px;}
@@ -441,6 +441,16 @@ function TrialExpiredScreen({ setScreen, goHome }) {
   );
 }
 
+// Shows **bold** markers in question text as real bold (used by "bold sentence" questions)
+function RichText({ text }) {
+  const parts = String(text == null ? '' : text).split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((p, i) =>
+    p.length > 4 && p.startsWith('**') && p.endsWith('**')
+      ? <strong key={i}>{p.slice(2, -2)}</strong>
+      : <span key={i}>{p}</span>
+  );
+}
+
 // ─── PRACTICE ──────────────────────────────────────────────────────────────
 function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
   const { topicRecords, sessionHistory, isGuestLimited, guestStatus, recordAnswer, questionsCache, answeredCorrectly, answeredWrongly, recentTopics, isTrialExpired } = useStore();
@@ -597,7 +607,7 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
           <span style={{ fontSize:11, color:'#9ca3af', fontWeight:600 }}>{tl(q.topic || '')}</span>
           <span style={{ fontSize:11, fontWeight:700, background:subj?.light, color:subj?.color, borderRadius:99, padding:'3px 11px' }}>{diffLabel}</span>
         </div>
-        <div className="q-card">{q.q || q.question}</div>
+        <div className="q-card"><RichText text={q.q || q.question} /></div>
         <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:14 }}>
           {opts.map((opt, i) => {
             const isCorrect = opt === ans;
@@ -626,7 +636,7 @@ function PracticeScreen({ setScreen, subject, subj, onEnd, onLoginRequired }) {
                 <div style={{ fontWeight:700, fontSize:14, color:selected===ans?'#15803d':'#dc2626' }}>
                   {selected===ans ? (isLate ? 'Correct! (Take your time next time ⏱)' : 'Correct!') : `Answer: ${ans}`}
                 </div>
-                {(q.exp || q.explanation) && <div style={{ fontSize:12, color:'#4b5563', marginTop:3, lineHeight:1.5 }}>{q.exp || q.explanation}</div>}
+                {(q.exp || q.explanation) && <div style={{ fontSize:12, color:'#4b5563', marginTop:3, lineHeight:1.5 }}><RichText text={q.exp || q.explanation} /></div>}
               </div>
             </div>
             <button className="primary-btn" style={{ background:subj?.color }} onClick={loadNext}>Next Question →</button>
